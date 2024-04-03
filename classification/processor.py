@@ -19,7 +19,7 @@ class ResultProcessor:
 
     def __init__(self, df_all=None, df_men=None, df_women=None):
         """
-        Initializes the ResultProcessor with the DataFrame containing race results.
+        Initialises the ResultProcessor with the DataFrame containing race results.
 
 
         Parameters:
@@ -146,7 +146,7 @@ class ResultProcessor:
         self.df_men = self.df_men.reset_index(drop=True)
         self.df_women = self.df_women.reset_index(drop=True)
 
-        # Preprocess the 'Tijd' column to ensure consistent format
+        # Ensure the 'Tijd' column has consistent format
         self.df_men['Tijd'] = self.df_men['Tijd'].apply(self._preprocess_time)
         self.df_women['Tijd'] = self.df_women['Tijd'].apply(self._preprocess_time)
 

@@ -14,7 +14,7 @@ class ResultReader:
 
     def __init__(self, file_format):
         """
-        Initializes the ResultReader with the specified file format.
+        Initialises the ResultReader with the specified file format.
 
         Parameters:
         -----------

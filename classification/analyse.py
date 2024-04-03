@@ -26,7 +26,7 @@ def calculate_points_for_year(year, races):
     # TODO: No hardcoded path
     path = f'/Users/lvermunt/Documents/Tijdelijk/Persoonlijk/PersonalProjects/RunBikeRunSeries/input/{year}/'
 
-    # Initialize an empty list to store DataFrames for each race
+    # Initialise an empty list to store DataFrames for each race
     race_dfs_men = []
     race_dfs_women = []
 

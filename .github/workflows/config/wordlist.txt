@@ -5,7 +5,9 @@ spotify
 
 github
 dataframe
+DataFrame
 dataframes
+DataFrames
 entrypoint
 api
 
@@ -31,3 +33,18 @@ df
 uri
 uri's
 url
+
+Tijd
+NaN
+Sittard
+Borne
+Utrecht
+Bathmen
+Hulsbeek
+RBR
+Naam
+Tijd
+
+ResultReader
+ResultProcessor
+ResultScorer
