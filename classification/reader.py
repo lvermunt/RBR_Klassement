@@ -5,11 +5,6 @@ import pandas as pd
 class ResultReader:
     """
     A class to read race results from different file formats.
-
-    Attributes:
-    ----------
-    file_format : str
-        The format of the result file ('excel', 'text', etc.).
     """
 
     def __init__(self, file_format):
@@ -18,8 +13,7 @@ class ResultReader:
 
         Parameters:
         -----------
-        file_format : str
-            The format of the result file ('excel', 'text', etc.).
+            file_format (str): The format of the result file ('excel', 'text', etc.).
         """
         self.file_format = file_format
 
@@ -29,13 +23,11 @@ class ResultReader:
 
         Parameters:
         -----------
-        file_path : str
-            The path to the result file.
+            file_path (str): The path to the result file.
 
         Returns:
         --------
-        pd.DataFrame
-            A DataFrame containing the race results.
+            pd.DataFrame: A DataFrame containing the race results.
         """
         if self.file_format == 'excel':
             return self._read_excel_results(file_path)
@@ -49,13 +41,11 @@ class ResultReader:
 
         Parameters:
         -----------
-        file_path : str
-            The path to the Excel file.
+            file_path (str): The path to the Excel file.
 
         Returns:
         --------
-        pd.DataFrame
-            A DataFrame containing the race results.
+            pd.DataFrame: A DataFrame containing the race results.
         """
         return pd.read_excel(file_path)
 
@@ -65,12 +55,10 @@ class ResultReader:
 
         Parameters:
         -----------
-        file_path : str
-            The path to the text file.
+            file_path (str): The path to the text file.
 
         Returns:
         --------
-        pd.DataFrame
-            A DataFrame containing the race results.
+            pd.DataFrame: A DataFrame containing the race results.
         """
         return pd.read_csv(file_path, delimiter='\t')

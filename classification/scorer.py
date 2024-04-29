@@ -8,14 +8,12 @@ class ResultScorer:
 
     def __init__(self, race_results, race_name):
         """
-        Initialize the ResultScorer with race results DataFrame.
+        Initializes the ResultScorer with race results DataFrame.
 
         Parameters:
         -----------
-        race_results : pd.DataFrame
-            DataFrame containing the race results.
-        race_name : str
-            Name of the race.
+            race_results (pd.DataFrame): DataFrame containing the race results.
+            race_name (str): Name of the race.
         """
         self.race_results = race_results
         self.race_name = race_name
@@ -27,20 +25,9 @@ class ResultScorer:
 
         Returns:
         --------
-        list
-            Points distribution array.
+            list: Points distribution array.
         """
-        return [
-            250, 240, 230, 225, 220, 215, 210, 205, 200, 195, 190, 185, 180, 175, 170,
-            168, 166, 164, 162, 160, 158, 156, 154, 152, 150, 148, 146, 144, 142, 140,
-            138, 136, 134, 132, 130, 128, 126, 124, 122, 120, 118, 116, 114, 112, 110,
-            108, 106, 104, 102, 100, 99, 98, 97, 96, 95, 94, 93, 92, 91, 90, 89, 88, 87,
-            86, 85, 84, 83, 82, 81, 80, 79, 78, 77, 76, 75, 74, 73, 72, 71, 70, 69, 68,
-            67, 66, 65, 64, 63, 62, 61, 60, 59, 58, 57, 56, 55, 54, 53, 52, 51, 50, 49,
-            48, 47, 46, 45, 44, 43, 42, 41, 40, 39, 38, 37, 36, 35, 34, 33, 32, 31, 30,
-            29, 28, 27, 26, 25, 24, 23, 22, 21, 20, 19, 18, 17, 16, 15, 14, 13, 12, 11,
-            10, 9, 8, 7, 6, 5, 4, 3, 2, 1
-        ]
+        return [250, 240] + list(range(230, 170, -5)) + list(range(170, 100, -2)) + list(range(100, 0, -1))
 
     def calculate_points(self, sort_column='Tijd', position_column=None):
         """
@@ -48,36 +35,31 @@ class ResultScorer:
 
         Parameters:
         -----------
-        sort_column : str, optional
-            Column name to sort the race results. Default is 'Tijd'.
-        position_column : str, optional
-            Column name specifying the position in the classification. Default is None.
+            sort_column (str, optional): Column name to sort the race results. Default is 'Tijd'.
+            position_column (str, optional): Column name specifying the position in the classification. Default is None.
 
         Returns:
         --------
-        pd.DataFrame
-            DataFrame with points assigned to participants.
+            pd.DataFrame: DataFrame with points assigned to participants.
         """
         # Define the points distribution array
         points_distribution = self._calculate_points_distribution()
 
+        # Sort race results by the specified column (e.g., final time) and (if needed) by position
         if position_column:
-            # Sort race results by the specified column (e.g., final time) and then by position
             sorted_results = self.race_results.sort_values(by=[sort_column, position_column])
         else:
-            # Sort race results only by the specified column (e.g., final time)
             sorted_results = self.race_results.sort_values(by=sort_column)
 
         # Get the number of participants and calculate the length of the points distribution array
         num_participants = len(sorted_results)
         points_array_length = len(points_distribution)
 
-        # Calculate points based on position
-        if num_participants <= points_array_length:
-            sorted_results[f'Points_{self.race_name}'] = points_distribution[:num_participants]
-        else:
-            sorted_results[f'Points_{self.race_name}'] = points_distribution[:points_array_length]
-            # Assign 1 point to participants with a ranking exceeding the length of points_distribution array
-            sorted_results.loc[points_array_length:, f'Points_{self.race_name}'] = 1
+        # Using minimum of num_participants and points_array_length to avoid index out-of-range
+        points_to_assign = points_distribution[:min(num_participants, points_array_length)]
+        sorted_results[f'Points_{self.race_name}'] = points_to_assign + [1] * (num_participants - len(points_to_assign))
+
+        # Assign ranks based on the sorted order; this automatically considers position_column if provided
+        sorted_results[f'Rank_{self.race_name}'] = range(1, num_participants + 1)
 
         return sorted_results
