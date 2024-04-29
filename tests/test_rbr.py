@@ -15,9 +15,9 @@ class TestRBR(unittest.TestCase):
         Testing the functionalities for reading the results
         """
 
-        path = './input/'
+        path = 'tests/input/'
         reader = ResultReader('excel')
-        df_all = reader.read_results(path + 'SittardS/uitslag.xlsx')
+        df_all = reader.read_results(path + 'Sittard/uitslag.xlsx')
         self.assertIsInstance(df_all, pd.DataFrame)
         self.assertTrue(not df_all.empty)
 
@@ -26,7 +26,7 @@ class TestRBR(unittest.TestCase):
         Testing the functionalities for processing the results
         """
 
-        path = './input/'
+        path = 'tests/input/'
         reader = ResultReader('excel')
         df_all = reader.read_results(path + 'Sittard/uitslag.xlsx')
         processor = ResultProcessor(df_all=df_all)
@@ -39,7 +39,7 @@ class TestRBR(unittest.TestCase):
         """
 
         # Test calculating points for race results
-        path = './input/'
+        path = 'tests/input/'
         reader = ResultReader('excel')
         df_all = reader.read_results(path + 'Sittard/uitslag.xlsx')
         processor = ResultProcessor(df_all=df_all)
