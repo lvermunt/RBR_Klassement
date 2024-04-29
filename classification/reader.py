@@ -1,7 +1,8 @@
 """Module to read in the race results"""
 import pandas as pd
 
-#pylint: disable=too-few-public-methods
+
+# pylint: disable=too-few-public-methods
 class ResultReader:
     """
     A class to read race results from different file formats.

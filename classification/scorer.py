@@ -1,6 +1,7 @@
 """Module to assign points to the participants based on race results"""
 
-#pylint: disable=too-few-public-methods
+
+# pylint: disable=too-few-public-methods
 class ResultScorer:
     """
     A class to assign points to participants based on race results.

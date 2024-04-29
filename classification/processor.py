@@ -2,7 +2,8 @@
 import logging
 import math
 
-#pylint: disable=too-few-public-methods
+
+# pylint: disable=too-few-public-methods
 class ResultProcessor:
     """
     A class to process the race results stored in DataFrames.
@@ -153,9 +154,9 @@ class ResultProcessor:
 
                 # General column names
                 if time_column_name:
-                    df = df.rename(columns = {f'{time_column_name}':'Tijd'})
+                    df = df.rename(columns={f'{time_column_name}': 'Tijd'})
                 if participant_column_name:
-                    df = df.rename(columns = {f'{participant_column_name}':'Naam'})
+                    df = df.rename(columns={f'{participant_column_name}': 'Naam'})
 
                 # Drop header
                 df.drop(df.index[0], inplace=True)
@@ -206,7 +207,7 @@ class ResultProcessor:
 
     def _clean_dataframe(self):
         """
-        Cleans data in the DataFrame(s) by 
+        Cleans data in the DataFrame(s) by
         - removing rows that are not considered as valid participant entries (empty/title/column lines)
         - removing participants that had DQ, DNS, or DNF
         - removing duplicated partipants

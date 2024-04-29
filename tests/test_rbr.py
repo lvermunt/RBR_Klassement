@@ -5,6 +5,7 @@ from classification.reader import ResultReader
 from classification.processor import ResultProcessor
 from classification.scorer import ResultScorer
 
+
 class TestRBR(unittest.TestCase):
     """
     Test cases for the RunBikeRun package.
@@ -31,7 +32,7 @@ class TestRBR(unittest.TestCase):
         df_all = reader.read_results(path + 'Sittard/uitslag.xlsx')
         processor = ResultProcessor(df_all=df_all)
         processor.process_results('Sittard', year=2023)
-        #TODO: Add assertions to check if processing is done correctly
+        # TODO: Add assertions to check if processing is done correctly
 
     def test_calculate_points(self):
         """
@@ -46,7 +47,9 @@ class TestRBR(unittest.TestCase):
         processor.process_results('Sittard', year=2023)
         scorer = ResultScorer(processor.df_men, 'Sittard')
         df_points = scorer.calculate_points(sort_column='Tijd')
-        #TODO: Add assertions to check if points calculation is correct
+        print(df_points)
+        # TODO: Add assertions to check if points calculation is correct
+
 
 if __name__ == '__main__':
     unittest.main()

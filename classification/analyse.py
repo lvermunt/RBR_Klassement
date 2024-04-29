@@ -5,6 +5,7 @@ from classification.reader import ResultReader
 from classification.processor import ResultProcessor
 from classification.scorer import ResultScorer
 
+
 def calculate_points_for_year(path, year, races):
     """
     Calculate points for participants based on race results for a given year and list of races.
@@ -109,6 +110,7 @@ def calculate_points_for_year(path, year, races):
 
     return combined_df_men, combined_df_women
 
+
 def main():
     """
     Main function to process race results and calculate points.
@@ -143,6 +145,7 @@ def main():
     outpath = args.path + f'/output/klassement_{args.races[-1]}/'
     results_men[columns_needed].to_excel(f'{outpath}/Klassement_{args.races[-1]}_Man.xlsx', index=False)
     results_women[columns_needed].to_excel(f'{outpath}/Klassement_{args.races[-1]}_Vrouw.xlsx', index=False)
+
 
 if __name__ == "__main__":
     main()
