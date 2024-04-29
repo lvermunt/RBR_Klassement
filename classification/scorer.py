@@ -9,7 +9,7 @@ class ResultScorer:
 
     def __init__(self, race_results, race_name):
         """
-        Initializes the ResultScorer with race results DataFrame.
+        Initialises the ResultScorer with race results DataFrame.
 
         Parameters:
         -----------
@@ -56,7 +56,7 @@ class ResultScorer:
         num_participants = len(sorted_results)
         points_array_length = len(points_distribution)
 
-        # Using minimum of num_participants and points_array_length to avoid index out-of-range
+        # Using minimum of number participants and points_array_length to avoid index out-of-range
         points_to_assign = points_distribution[:min(num_participants, points_array_length)]
         sorted_results[f'Points_{self.race_name}'] = points_to_assign + [1] * (num_participants - len(points_to_assign))
 

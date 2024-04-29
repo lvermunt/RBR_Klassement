@@ -11,8 +11,8 @@ class ResultProcessor:
 
     def __init__(self, df_all=None, df_men=None, df_women=None):
         """
-        Initializes the ResultProcessor with race results DataFrames. Either a combined (df_all), or
-        two gender-seperated dataframes (df_men and df_women) have to be provided.
+        Initialises the ResultProcessor with race results DataFrames. Either a combined (df_all), or
+        two gender-separated dataframes (df_men and df_women) have to be provided.
 
         Parameters:
         ----------
@@ -72,7 +72,7 @@ class ResultProcessor:
         }
         self._drop_categories(categories_dict[year])
 
-        # Drop '(U23)' substring from name
+        # Drop '(U23)' sub-string from name
         self.df_all['Naam'] = self.df_all['Naam'].str.replace(" (U23)", "")
 
         # Merge and remove duplicates for specified categories
@@ -210,7 +210,7 @@ class ResultProcessor:
         Cleans data in the DataFrame(s) by
         - removing rows that are not considered as valid participant entries (empty/title/column lines)
         - removing participants that had DQ, DNS, or DNF
-        - removing duplicated partipants
+        - removing duplicated participants
         """
         # List to iterate over, using references to the actual DataFrame objects.
         dataframes = {'all': self.df_all, 'men': self.df_men, 'women': self.df_women}

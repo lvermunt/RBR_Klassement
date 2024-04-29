@@ -8,7 +8,7 @@ from classification.scorer import ResultScorer
 
 class TestRBR(unittest.TestCase):
     """
-    Test cases for the RunBikeRun package.
+    Test cases for the Run-Bike-Run package.
     """
 
     def test_read_results(self):

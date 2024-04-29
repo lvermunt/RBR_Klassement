@@ -48,3 +48,8 @@ Tijd
 ResultReader
 ResultProcessor
 ResultScorer
+
+txt
+DNF
+DNS
+DQ

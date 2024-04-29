@@ -12,7 +12,7 @@ def calculate_points_for_year(path, year, races):
 
     Parameters:
     -----------
-        path (str): Path to directory with input and output subdirectories for various races
+        path (str): Path to directory with input and output sub-directories for various races
         year (int): Year for which race results are being calculated.
         races (list): List of race names for which results are to be processed.
 
@@ -23,7 +23,7 @@ def calculate_points_for_year(path, year, races):
     # Prepare base input path for the given year
     path = path + f'/input/{year}/'
 
-    # Initialize containers for men's and women's data from each race
+    # Initialise containers for men's and women's data from each race
     race_dfs_men = []
     race_dfs_women = []
 
@@ -53,7 +53,7 @@ def calculate_points_for_year(path, year, races):
         df_points_men = scorer_men.calculate_points('Tijd', place_string)
         df_points_women = scorer_women.calculate_points('Tijd', place_string)
 
-        # Normalize names to title case
+        # Normalise names to title case
         df_points_men['Naam'] = df_points_men['Naam'].map(str.title)
         df_points_women['Naam'] = df_points_women['Naam'].map(str.title)
 
@@ -89,7 +89,7 @@ def calculate_points_for_year(path, year, races):
     combined_df_women = combined_df_women.sort_values(by=['Total', 'Top_Rank'], ascending=[False, True])
 
     # Calculate rank based on 'Total'. Tie breaker is based on highest rank in individual races
-    # TODO: Add more than one highest rank, i.e.: (row['Total'], -row['HighestRank'], -row['SecondHighestRank'])
+    # TODO: Add more than one highest rank, i.e.: (row['Total'], -row['Highest-Rank'], -row['Second-Highest-Rank'])
     combined_df_men['Rank'] = combined_df_men.apply(lambda row: (row['Total'], -row['Top_Rank']), axis=1) \
         .rank(method='min', ascending=False).astype(int)
     combined_df_women['Rank'] = combined_df_women.apply(lambda row: (row['Total'], -row['Top_Rank']), axis=1) \
@@ -117,7 +117,7 @@ def main():
 
     Parser arguments:
     -----------
-        path (str): Path to directory with input and output subdirectories for various races
+        path (str): Path to directory with input and output sub-directories for various races
         year (int): The year of the races.
         races (list of str): A list containing the names of the races to process.
     """
