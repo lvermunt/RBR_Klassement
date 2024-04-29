@@ -30,7 +30,7 @@ class TestRBR(unittest.TestCase):
         reader = ResultReader('excel')
         df_all = reader.read_results(path + 'Sittard/uitslag.xlsx')
         processor = ResultProcessor(df_all=df_all)
-        processor.process_results('Sittard')
+        processor.process_results('Sittard', year=2023)
         #TODO: Add assertions to check if processing is done correctly
 
     def test_calculate_points(self):
@@ -43,9 +43,9 @@ class TestRBR(unittest.TestCase):
         reader = ResultReader('excel')
         df_all = reader.read_results(path + 'Sittard/uitslag.xlsx')
         processor = ResultProcessor(df_all=df_all)
-        processor.process_results('Sittard')
+        processor.process_results('Sittard', year=2023)
         scorer = ResultScorer(processor.df_men, 'Sittard')
-        df_points = scorer.calculate_points(sort_column='Time')
+        df_points = scorer.calculate_points(sort_column='Tijd')
         #TODO: Add assertions to check if points calculation is correct
 
 if __name__ == '__main__':
