@@ -1,11 +1,13 @@
 """Module to calculate the classification"""
 import argparse
 import pandas as pd
+import numpy as np
 from classification.reader import ResultReader
 from classification.processor import ResultProcessor
 from classification.scorer import ResultScorer
 
 
+# pylint: disable=too-many-statements
 def calculate_points_for_year(path, year, races):
     """
     Calculate points for participants based on race results for a given year and list of races.
@@ -70,9 +72,17 @@ def calculate_points_for_year(path, year, races):
     for df_women in race_dfs_women[1:]:
         combined_df_women = pd.merge(combined_df_women, df_women, on='Naam', how='outer')
 
-    # Create a column for sorting that ranks each entry based on the descending order of points from each race
+    # Create columns for additional sorting in case of tie's based on highest rank
     for df in [combined_df_men, combined_df_women]:
-        df['Top_Rank'] = df[[col for col in df.columns if 'Rank' in col]].min(axis=1)
+        rank_columns = df.filter(like='Rank_')
+        max_ranks = len(rank_columns.columns)
+        for idx in range(max_ranks):
+            column_name = f'Top{idx+1}_Rank'
+            df[column_name] = rank_columns.apply(
+                lambda x, rank=idx+1: x.nsmallest(rank).iloc[-1]
+                if x.nsmallest(rank).size > 0 else np.nan,
+                axis=1
+            )
 
     # Calculate the total points for each participant as the sum of points of the top 3 scores of all races
     # and add bonus points for participation in 4 and 5 races
@@ -85,15 +95,22 @@ def calculate_points_for_year(path, year, races):
         df['Bonus'] = df['Bonus'].replace(0, -1)
 
     # Sort the combined results based on total points
-    combined_df_men = combined_df_men.sort_values(by=['Total', 'Top_Rank'], ascending=[False, True])
-    combined_df_women = combined_df_women.sort_values(by=['Total', 'Top_Rank'], ascending=[False, True])
+    rank_columns = [col for col in combined_df_men.columns if col.startswith('Top') and col.endswith('_Rank')]
+    max_ranks = len(rank_columns)
+    combined_df_men = combined_df_men.sort_values(by=['Total'] + rank_columns,
+                                                  ascending=[False] + [True] * max_ranks)
+    combined_df_women = combined_df_women.sort_values(by=['Total'] + rank_columns,
+                                                      ascending=[False] + [True] * max_ranks)
 
     # Calculate rank based on 'Total'. Tie breaker is based on highest rank in individual races
-    # TODO: Add more than one highest rank, i.e.: (row['Total'], -row['Highest-Rank'], -row['Second-Highest-Rank'])
-    combined_df_men['Rank'] = combined_df_men.apply(lambda row: (row['Total'], -row['Top_Rank']), axis=1) \
-        .rank(method='min', ascending=False).astype(int)
-    combined_df_women['Rank'] = combined_df_women.apply(lambda row: (row['Total'], -row['Top_Rank']), axis=1) \
-        .rank(method='min', ascending=False).astype(int)
+    combined_df_men['Rank'] = combined_df_men.apply(
+        lambda row: tuple([row['Total']] + [-row[col] if pd.notna(row[col]) else float('inf') for col in rank_columns]),
+        axis=1
+    ).rank(method='min', ascending=False).astype(int)
+    combined_df_women['Rank'] = combined_df_women.apply(
+        lambda row: tuple([row['Total']] + [-row[col] if pd.notna(row[col]) else float('inf') for col in rank_columns]),
+        axis=1
+    ).rank(method='min', ascending=False).astype(int)
 
     # Fill NaN values with -1 for now
     combined_df_men = combined_df_men.fillna(-1)
