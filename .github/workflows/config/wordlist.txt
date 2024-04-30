@@ -30,6 +30,7 @@ pylint
 
 inputdir
 df
+dfs
 uri
 uri's
 url
