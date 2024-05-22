@@ -35,6 +35,8 @@ def process_race(path, race, year):
         df_all = reader.read_results(path + f'{race}/Uitslagen_aangepast.xlsx')
         result = ResultProcessor(df_all=df_all)
         place_string = 'uitslag'
+    else:
+        raise ValueError("Unsupported race. Not (yet) implemented.")
 
     # Process the input
     result.process_results(race, year)
@@ -103,12 +105,12 @@ def calculate_ranks_and_totals(df):
     df['Total'] += df['Bonus']
 
     # Sort the combined results based on total points
-    sort_columns = ['Total'] + [f'Top{idx + 1}_Rank' for idx in range(max_ranks)]
-    df = df.sort_values(by=sort_columns, ascending=[False] + [True] * max_ranks)
+    sort_col = ['Total'] + [f'Top{idx + 1}_Rank' for idx in range(max_ranks)]
+    df = df.sort_values(by=sort_col, ascending=[False] + [True] * max_ranks)
 
     # Calculate rank based on 'Total'. Tie breaker is based on highest rank in individual races
     df['Rank'] = df.apply(
-        lambda row: tuple([row['Total']] + [-row[col] if pd.notna(row[col]) else float('inf') for col in sort_columns[1:]]),
+        lambda row: tuple([row['Total']] + [-row[col] if pd.notna(row[col]) else float('inf') for col in sort_col[1:]]),
         axis=1
     ).rank(method='min', ascending=False).astype(int)
 
@@ -137,6 +139,13 @@ def calculate_points_for_year(path, year, races):
         race_dfs_men.append(df_points_men)
         race_dfs_women.append(df_points_women)
 
+    # Load agegroup information
+    reader = ResultReader('excel')
+    df_ag_men = reader.read_results(path + 'Agegroups_mannen.xlsx')
+    df_ag_women = reader.read_results(path + 'Agegroups_vrouwen.xlsx')
+    df_ag_men['Naam'] = df_ag_men['Naam'].map(str.title)
+    df_ag_women['Naam'] = df_ag_women['Naam'].map(str.title)
+
     combined_df_men = merge_race_dataframes(race_dfs_men)
     combined_df_women = merge_race_dataframes(race_dfs_women)
 
@@ -146,6 +155,16 @@ def calculate_points_for_year(path, year, races):
     # Sort DataFrames on rank, which takes ties properly into account
     combined_df_men = combined_df_men.sort_values(by=['Rank'])
     combined_df_women = combined_df_women.sort_values(by=['Rank'])
+
+    # Add AG information and calculate ranking
+    combined_df_men = pd.merge(combined_df_men, df_ag_men, on='Naam', how='left')
+    combined_df_women = pd.merge(combined_df_women, df_ag_women, on='Naam', how='left')
+    combined_df_men['Rank_AG'] = combined_df_men.groupby('AgeGroup').cumcount() + 1
+    combined_df_women['Rank_AG'] = combined_df_women.groupby('AgeGroup').cumcount() + 1
+    combined_df_men["Rank_AG"] = 'Rank AG (' + combined_df_men['AgeGroup'] + '): ' + \
+        combined_df_men["Rank_AG"].astype(str)
+    combined_df_women["Rank_AG"] = 'Rank AG (' + combined_df_women['AgeGroup'] + '): ' + \
+        combined_df_women["Rank_AG"].astype(str)
 
     # Fill NaN values with -1 for now
     combined_df_men = combined_df_men.fillna(-1)
@@ -190,7 +209,7 @@ def main():
     print(results_women.to_string())
 
     points_columns = [col for col in results_men.columns if col.startswith('Points_')]
-    columns_needed = ['Naam', 'Rank', 'Total'] + points_columns + ['Bonus']
+    columns_needed = ['Naam', 'Rank', 'Total'] + points_columns + ['Bonus', 'Rank_AG']
     print(results_men[columns_needed].to_string(index=False))
     print(results_women[columns_needed].to_string(index=False))
 
