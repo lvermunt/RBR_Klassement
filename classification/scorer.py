@@ -20,7 +20,7 @@ class ResultScorer:
         self.race_name = race_name
 
     @staticmethod
-    def _calculate_points_distribution():
+    def _get_points_distribution():
         """
         Define the points distribution array.
 
@@ -44,7 +44,7 @@ class ResultScorer:
             pd.DataFrame: DataFrame with points assigned to participants.
         """
         # Define the points distribution array
-        points_distribution = self._calculate_points_distribution()
+        points_distribution = self._get_points_distribution()
 
         # Sort race results by the specified column (e.g., final time) and (if needed) by position
         if position_column:

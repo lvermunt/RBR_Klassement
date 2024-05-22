@@ -88,9 +88,9 @@ def calculate_ranks_and_totals(df):
     rank_columns = df.filter(like='Rank_')
     max_ranks = len(rank_columns.columns)
     for idx in range(max_ranks):
-        column_name = f'Top{idx+1}_Rank'
+        column_name = f'Top{idx + 1}_Rank'
         df[column_name] = rank_columns.apply(
-            lambda x, rank=idx+1: x.nsmallest(rank).iloc[-1]
+            lambda x, rank=idx + 1: x.nsmallest(rank).iloc[-1]
             if x.nsmallest(rank).size > 0 else np.nan,
             axis=1
         )
@@ -103,7 +103,7 @@ def calculate_ranks_and_totals(df):
     df['Total'] += df['Bonus']
 
     # Sort the combined results based on total points
-    sort_columns = ['Total'] + [f'Top{idx+1}_Rank' for idx in range(max_ranks)]
+    sort_columns = ['Total'] + [f'Top{idx + 1}_Rank' for idx in range(max_ranks)]
     df = df.sort_values(by=sort_columns, ascending=[False] + [True] * max_ranks)
 
     # Calculate rank based on 'Total'. Tie breaker is based on highest rank in individual races
@@ -175,7 +175,6 @@ def main():
         year (int): The year of the races.
         races (list of str): A list containing the names of the races to process.
     """
-
     parser = argparse.ArgumentParser(description="Process race results and calculate points.")
     parser.add_argument("path", type=str, help="Path to directory with input and output folders")
     parser.add_argument("year", type=int, help="Year of the races")

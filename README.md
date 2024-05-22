@@ -11,5 +11,3 @@ git clone https://github.com/lvermunt/RBR_Klassement.git
 cd RBR_Klassement
 pip3 install -e .
 ```
-
-Using the [`black`](https://github.com/psf/black) package to automatically format the Python code.
