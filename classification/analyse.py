@@ -35,6 +35,11 @@ def process_race(path, race, year):
         df_all = reader.read_results(path + f'{race}/Uitslagen_aangepast.xlsx')
         result = ResultProcessor(df_all=df_all)
         place_string = 'uitslag'
+    elif 'Bathmen' in race:
+        df_men = reader.read_results(path + f'{race}/Uitslag_man_extracted.xlsx')
+        df_women = reader.read_results(path + f'{race}/Uitslag_vrouw_extracted.xlsx')
+        result = ResultProcessor(df_men=df_men, df_women=df_women)
+        place_string = 'POS'
     else:
         raise ValueError("Unsupported race. Not (yet) implemented.")
 

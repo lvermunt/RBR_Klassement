@@ -42,9 +42,13 @@ class ResultProcessor:
         except AttributeError:
             logging.error('Race "%s" has not been implemented yet', race)
 
-    def process_results_borne(self):
+    def process_results_borne(self, year=2024):
         """
         Process the Borne race results DataFrame according to the specified rules.
+
+        Parameters:
+        -----------
+            year (int, optional): Year of the race results (default is 2024).
         """
         self._process_header(4, 'Totaal')
 
@@ -114,6 +118,18 @@ class ResultProcessor:
         }
         self.df_men = self._merge_categories(men_categories_dict[year])
         self.df_women = self._merge_categories(women_categories_dict[year])
+
+        self._clean_dataframe()
+
+    def process_results_bathmen(self, year=2024):
+        """
+        Process the Bathmen race results DataFrame according to the specified rules.
+
+        Parameters:
+        -----------
+            year (int, optional): Year of the race results (default is 2024).
+        """
+        self._process_header(0, 'NETTO TIJD', 'NAAM')
 
         self._clean_dataframe()
 
