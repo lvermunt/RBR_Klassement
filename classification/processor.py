@@ -131,6 +131,10 @@ class ResultProcessor:
         """
         self._process_header(0, 'NETTO TIJD', 'NAAM')
 
+        # Remove Duo teams
+        self.df_men = self.df_men.query("CATEGORIE != 'Duo'")
+        self.df_women = self.df_women.query("CATEGORIE != 'Duo'")
+
         self._clean_dataframe()
 
     def _update_dataframe(self, key, df):

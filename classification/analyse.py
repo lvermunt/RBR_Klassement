@@ -166,10 +166,10 @@ def calculate_points_for_year(path, year, races):
     combined_df_women = pd.merge(combined_df_women, df_ag_women, on='Naam', how='left')
     combined_df_men['Rank_AG'] = combined_df_men.groupby('AgeGroup').cumcount() + 1
     combined_df_women['Rank_AG'] = combined_df_women.groupby('AgeGroup').cumcount() + 1
-    combined_df_men["Rank_AG"] = 'Rank AG (' + combined_df_men['AgeGroup'] + '): ' + \
-        combined_df_men["Rank_AG"].astype(str)
-    combined_df_women["Rank_AG"] = 'Rank AG (' + combined_df_women['AgeGroup'] + '): ' + \
-        combined_df_women["Rank_AG"].astype(str)
+    combined_df_men["Rank_AG"] = combined_df_men["Rank_AG"].astype(str) + \
+        ' (' + combined_df_men['AgeGroup'] + ')'
+    combined_df_women["Rank_AG"] = combined_df_women["Rank_AG"].astype(str) + \
+        ' (' + combined_df_women['AgeGroup'] + ')'
 
     # Fill NaN values with -1 for now
     combined_df_men = combined_df_men.fillna(-1)
