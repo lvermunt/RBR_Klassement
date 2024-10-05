@@ -137,6 +137,23 @@ class ResultProcessor:
 
         self._clean_dataframe()
 
+    def process_results_utrecht(self, year=2024):
+        """
+        Process the Utrecht race results DataFrame according to the specified rules.
+
+        Parameters:
+        -----------
+            year (int, optional): Year of the race results (default is 2024).
+        """
+        self._process_header(-1, 'Eindtijd', 'Deelnemer')
+
+        self.df_men = self.df_all.query("Geslacht == 'm'")
+        self.df_men = self.df_men.query("Wedstrijd == '86310 (Elite+Recr. M)' or Wedstrijd == '86327 (Recr. M+V)'")
+        self.df_women = self.df_all.query("Geslacht == 'v'")
+        self.df_women = self.df_women.query("Wedstrijd == '86323 (Elite+Recr. V)' or Wedstrijd == '86327 (Recr. M+V)'")
+
+        self._clean_dataframe()
+
     def _update_dataframe(self, key, df):
         """
         Updates the specific DataFrame attribute based on the provided key.
@@ -169,8 +186,9 @@ class ResultProcessor:
         for key, df in dataframes.items():
             if df is not None:
                 # Rename columns
-                new_column_names = df.iloc[index_row].to_dict()
-                df.rename(columns=new_column_names, inplace=True)
+                if index_row >= 0:
+                    new_column_names = df.iloc[index_row].to_dict()
+                    df.rename(columns=new_column_names, inplace=True)
 
                 # General column names
                 if time_column_name:
@@ -179,7 +197,8 @@ class ResultProcessor:
                     df = df.rename(columns={f'{participant_column_name}': 'Naam'})
 
                 # Drop header
-                df.drop(df.index[0], inplace=True)
+                if index_row >= 0:
+                    df.drop(df.index[0], inplace=True)
 
                 self._update_dataframe(key, df)
 

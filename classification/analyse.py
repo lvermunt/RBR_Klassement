@@ -28,8 +28,8 @@ def process_race(path, race, year):
         result = ResultProcessor(df_all=df_all)
         place_string = 'Plaats'
     elif 'Borne' in race:
-        df_men = reader.read_results(path + f'{race}/Run Bike Run Borne 26-08-2023 Uitslag Overall Mannen.xlsx')
-        df_women = reader.read_results(path + f'{race}/Run Bike Run Borne 26-08-2023 Uitslag Overall Vrouwen.xlsx')
+        df_men = reader.read_results(path + f'{race}/Run Bike Run Borne 24-08-2024 Uitslag Overall Mannen.xlsx')
+        df_women = reader.read_results(path + f'{race}/Run Bike Run Borne 24-08-2024 Uitslag Overall Vrouwen.xlsx')
         result = ResultProcessor(df_men=df_men, df_women=df_women)
     elif 'Hulsbeek' in race:
         df_all = reader.read_results(path + f'{race}/Uitslagen_aangepast.xlsx')
@@ -40,6 +40,10 @@ def process_race(path, race, year):
         df_women = reader.read_results(path + f'{race}/Uitslag_vrouw_extracted.xlsx')
         result = ResultProcessor(df_men=df_men, df_women=df_women)
         place_string = 'POS'
+    elif 'Utrecht' in race:
+        df_all = reader.read_results(path + f'{race}/uitslag_RBRUtrecht.xlsx')
+        result = ResultProcessor(df_all=df_all)
+        place_string = 'Positie'
     else:
         raise ValueError("Unsupported race. Not (yet) implemented.")
 
@@ -164,11 +168,11 @@ def calculate_points_for_year(path, year, races):
     # Add AG information and calculate ranking
     combined_df_men = pd.merge(combined_df_men, df_ag_men, on='Naam', how='left')
     combined_df_women = pd.merge(combined_df_women, df_ag_women, on='Naam', how='left')
-    combined_df_men['Rank_AG'] = combined_df_men.groupby('AgeGroup').cumcount() + 1
-    combined_df_women['Rank_AG'] = combined_df_women.groupby('AgeGroup').cumcount() + 1
-    combined_df_men["Rank_AG"] = combined_df_men["Rank_AG"].astype(str) + \
+    combined_df_men['Rank_AG'] = combined_df_men.groupby('AgeGroup')['Total'].rank(method='min', ascending=False)
+    combined_df_women['Rank_AG'] = combined_df_women.groupby('AgeGroup')['Total'].rank(method='min', ascending=False)
+    combined_df_men["Rank_AG"] = combined_df_men["Rank_AG"].astype(int).astype(str) + \
         ' (' + combined_df_men['AgeGroup'] + ')'
-    combined_df_women["Rank_AG"] = combined_df_women["Rank_AG"].astype(str) + \
+    combined_df_women["Rank_AG"] = combined_df_women["Rank_AG"].astype(int).astype(str) + \
         ' (' + combined_df_women['AgeGroup'] + ')'
 
     # Fill NaN values with -1 for now
