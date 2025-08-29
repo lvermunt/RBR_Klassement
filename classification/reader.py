@@ -1,4 +1,5 @@
 """Module to read in the race results"""
+
 import pandas as pd
 
 
@@ -30,11 +31,13 @@ class ResultReader:
         --------
             pd.DataFrame: A DataFrame containing the race results.
         """
-        if self.file_format == 'excel':
+        if self.file_format == "excel":
             return self._read_excel_results(file_path)
-        if self.file_format == 'text':
+        if self.file_format == "text":
             return self._read_text_results(file_path)
-        raise ValueError("Unsupported file format. Only 'excel' and 'text' are supported.")
+        raise ValueError(
+            "Unsupported file format. Only 'excel' and 'text' are supported."
+        )
 
     def _read_excel_results(self, file_path):
         """
@@ -62,4 +65,4 @@ class ResultReader:
         --------
             pd.DataFrame: A DataFrame containing the race results.
         """
-        return pd.read_csv(file_path, delimiter='\t')
+        return pd.read_csv(file_path, delimiter="\t")

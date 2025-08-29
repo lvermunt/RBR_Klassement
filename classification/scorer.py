@@ -28,9 +28,14 @@ class ResultScorer:
         --------
             list: Points distribution array.
         """
-        return [250, 240] + list(range(230, 170, -5)) + list(range(170, 100, -2)) + list(range(100, 0, -1))
+        return (
+            [250, 240]
+            + list(range(230, 170, -5))
+            + list(range(170, 100, -2))
+            + list(range(100, 0, -1))
+        )
 
-    def calculate_points(self, sort_column='Tijd', position_column=None):
+    def calculate_points(self, sort_column="Tijd", position_column=None):
         """
         Calculate points for participants based on race results.
 
@@ -48,7 +53,9 @@ class ResultScorer:
 
         # Sort race results by the specified column (e.g., final time) and (if needed) by position
         if position_column:
-            sorted_results = self.race_results.sort_values(by=[sort_column, position_column])
+            sorted_results = self.race_results.sort_values(
+                by=[sort_column, position_column]
+            )
         else:
             sorted_results = self.race_results.sort_values(by=sort_column)
 
@@ -57,10 +64,14 @@ class ResultScorer:
         points_array_length = len(points_distribution)
 
         # Using minimum of number participants and points_array_length to avoid index out-of-range
-        points_to_assign = points_distribution[:min(num_participants, points_array_length)]
-        sorted_results[f'Points_{self.race_name}'] = points_to_assign + [1] * (num_participants - len(points_to_assign))
+        points_to_assign = points_distribution[
+            : min(num_participants, points_array_length)
+        ]
+        sorted_results[f"Points_{self.race_name}"] = points_to_assign + [1] * (
+            num_participants - len(points_to_assign)
+        )
 
         # Assign ranks based on the sorted order; this automatically considers position_column if provided
-        sorted_results[f'Rank_{self.race_name}'] = range(1, num_participants + 1)
+        sorted_results[f"Rank_{self.race_name}"] = range(1, num_participants + 1)
 
         return sorted_results

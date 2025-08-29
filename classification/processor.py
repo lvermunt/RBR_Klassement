@@ -1,4 +1,5 @@
 """Module to process the race results."""
+
 import logging
 import math
 
@@ -37,7 +38,7 @@ class ResultProcessor:
             year (int, optional): Year of the race results (default is 2024).
         """
         try:
-            processing_method = getattr(self, f'process_results_{race.lower()}')
+            processing_method = getattr(self, f"process_results_{race.lower()}")
             processing_method(year)
         except AttributeError:
             logging.error('Race "%s" has not been implemented yet', race)
@@ -50,7 +51,7 @@ class ResultProcessor:
         -----------
             year (int, optional): Year of the race results (default is 2024).
         """
-        self._process_header(4, 'Totaal')
+        self._process_header(4, "Totaal")
 
         # Drop footer in excel sheet
         self.df_men.drop(self.df_men.index[-1], inplace=True)
@@ -58,7 +59,31 @@ class ResultProcessor:
 
         self._clean_dataframe()
 
-    def process_results_sittard(self, year=2024):
+    def process_results_rotterdam(self, year=2025):
+        """
+        Process the Rotterdam race results DataFrame according to the specified rules.
+
+        Parameters:
+        -----------
+            year (int, optional): Year of the race results (default is 2025).
+        """
+        self._process_header(2, "GUN TIME", "NAME")
+
+        self._clean_dataframe(status_column=8)
+
+    def process_results_sittard(self, year=2025):
+        """
+        Process the Sittard race results DataFrame according to the specified rules.
+
+        Parameters:
+        -----------
+            year (int, optional): Year of the race results (default is 2025).
+        """
+        self._process_header(0, "TIME", "Name")
+
+        self._clean_dataframe()
+
+    def process_results_sittard_old(self, year=2024):
         """
         Process the Sittard race results DataFrame according to the specified rules.
 
@@ -71,24 +96,37 @@ class ResultProcessor:
         # Find and drop participants of specific categories
         categories_dict = {
             2023: ["JJC, JJC JEUGD JONGENS", "MJC, JJC JEUGD MEISJES"],
-            2024: ["KIDSV, IRONKIDS", "KIDSM, IRONKIDS",
-                   "JJC, JJC JEUGD JONGENS", "MJC, JJC JEUGD MEISJES"]
+            2024: [
+                "KIDSV, IRONKIDS",
+                "KIDSM, IRONKIDS",
+                "JJC, JJC JEUGD JONGENS",
+                "MJC, JJC JEUGD MEISJES",
+            ],
         }
         self._drop_categories(categories_dict[year])
 
         # Drop '(U23)' sub-string from name
-        self.df_all['Naam'] = self.df_all['Naam'].str.replace(" (U23)", "")
+        self.df_all["Naam"] = self.df_all["Naam"].str.replace(" (U23)", "")
 
         # Merge and remove duplicates for specified categories
         men_categories_dict = {
-            2023: ["JJ, NK JUNIOREN JONGENS", "BM, NK JUNIOREN JONGENS", "MAN, NK MANNEN",
-                   "BMM, NK MANNEN", "MT23, NK NEOSENIOREN"],
-            2024: ["JJ, NK JUNIOREN JONGENS", "MAN, NK MANNEN"]
+            2023: [
+                "JJ, NK JUNIOREN JONGENS",
+                "BM, NK JUNIOREN JONGENS",
+                "MAN, NK MANNEN",
+                "BMM, NK MANNEN",
+                "MT23, NK NEOSENIOREN",
+            ],
+            2024: ["JJ, NK JUNIOREN JONGENS", "MAN, NK MANNEN"],
         }
         women_categories_dict = {
-            2023: ["VRW, NK VROUWEN", "BMV, NK VROUWEN", "MJ, NK JUNIOREN MEISJES",
-                   "VT23, NK NEOSENIOREN"],
-            2024: ["VRW, NK VROUWEN", "MJ, NK JUNIOREN MEISJES"]
+            2023: [
+                "VRW, NK VROUWEN",
+                "BMV, NK VROUWEN",
+                "MJ, NK JUNIOREN MEISJES",
+                "VT23, NK NEOSENIOREN",
+            ],
+            2024: ["VRW, NK VROUWEN", "MJ, NK JUNIOREN MEISJES"],
         }
         self.df_men = self._merge_categories(men_categories_dict[year])
         self.df_women = self._merge_categories(women_categories_dict[year])
@@ -97,7 +135,7 @@ class ResultProcessor:
 
         # Ensure the 'Tijd' column has consistent format
         for df in [self.df_men, self.df_women]:
-            df['Tijd'] = df['Tijd'].apply(self._preprocess_time)
+            df["Tijd"] = df["Tijd"].apply(self._preprocess_time)
 
     def process_results_hulsbeek(self, year=2024):
         """
@@ -107,14 +145,16 @@ class ResultProcessor:
         -----------
             year (int, optional): Year of the race results (default is 2024).
         """
-        self._process_header(2, 'tijd', 'deelnemer')
+        self._process_header(2, "tijd", "deelnemer")
 
         # Merge and remove duplicates for specified categories
         men_categories_dict = {
-            2024: ["Elite heren", "Recreanten mannen"]
+            2024: ["Elite heren", "Recreanten mannen"],
+            2025: ["Elite heren", "Recreanten mannen"],
         }
         women_categories_dict = {
-            2024: ["Elite dames", "Recreanten vrouwen"]
+            2024: ["Elite dames", "Recreanten vrouwen"],
+            2025: ["Elite dames"],
         }
         self.df_men = self._merge_categories(men_categories_dict[year])
         self.df_women = self._merge_categories(women_categories_dict[year])
@@ -129,7 +169,7 @@ class ResultProcessor:
         -----------
             year (int, optional): Year of the race results (default is 2024).
         """
-        self._process_header(0, 'NETTO TIJD', 'NAAM')
+        self._process_header(0, "NETTO TIJD", "NAAM")
 
         # Remove Duo teams
         self.df_men = self.df_men.query("CATEGORIE != 'Duo'")
@@ -137,7 +177,7 @@ class ResultProcessor:
 
         self._clean_dataframe()
 
-    def process_results_utrecht(self, year=2024):
+    def process_results_utrecht(self, year=2025):
         """
         Process the Utrecht race results DataFrame according to the specified rules.
 
@@ -145,12 +185,22 @@ class ResultProcessor:
         -----------
             year (int, optional): Year of the race results (default is 2024).
         """
-        self._process_header(-1, 'Eindtijd', 'Deelnemer')
+        self._process_header(-1, "Eindtijd", "Deelnemer")
 
-        self.df_men = self.df_all.query("Geslacht == 'm'")
-        self.df_men = self.df_men.query("Wedstrijd == '86310 (Elite+Recr. M)' or Wedstrijd == '86327 (Recr. M+V)'")
-        self.df_women = self.df_all.query("Geslacht == 'v'")
-        self.df_women = self.df_women.query("Wedstrijd == '86323 (Elite+Recr. V)' or Wedstrijd == '86327 (Recr. M+V)'")
+        self.df_men = self.df_all.query("`m/v` == 'm'")
+        if year == 2024:
+            self.df_men = self.df_men.query("Wedstrijd == '86310 (E+R M)' or Wedstrijd == '86327 (R)'")
+        elif year == 2025:
+            self.df_men = self.df_men.query("Wedstrijd == '90782 (E M)' or Wedstrijd == '90790 (R M)'")
+
+        self.df_women = self.df_all.query("`m/v` == 'v'")
+        if year == 2024:
+            self.df_women = self.df_women.query("Wedstrijd == '86323 (E+R V)' or Wedstrijd == '86327 (R)'")
+        elif year == 2025:
+            self.df_women = self.df_women.query("Wedstrijd == '90786 (E+R V)'")
+
+        self.df_men = self.df_men.drop(columns="Wedstrijd")
+        self.df_women = self.df_women.drop(columns="Wedstrijd")
 
         self._clean_dataframe()
 
@@ -163,11 +213,11 @@ class ResultProcessor:
             key (str): Key identifying which DataFrame to update ('all', 'men', 'women').
             df (pd.DataFrame): The DataFrame to set for the specified key.
         """
-        if key == 'all':
+        if key == "all":
             self.df_all = df
-        elif key == 'men':
+        elif key == "men":
             self.df_men = df
-        elif key == 'women':
+        elif key == "women":
             self.df_women = df
 
     def _process_header(self, index_row, time_column_name=None, participant_column_name=None):
@@ -181,7 +231,7 @@ class ResultProcessor:
             participant_column_name (str, optional): Original column name for participants names.
         """
         # List to iterate over, using references to the actual DataFrame objects.
-        dataframes = {'all': self.df_all, 'men': self.df_men, 'women': self.df_women}
+        dataframes = {"all": self.df_all, "men": self.df_men, "women": self.df_women}
 
         for key, df in dataframes.items():
             if df is not None:
@@ -192,9 +242,9 @@ class ResultProcessor:
 
                 # General column names
                 if time_column_name:
-                    df = df.rename(columns={f'{time_column_name}': 'Tijd'})
+                    df = df.rename(columns={f"{time_column_name}": "Tijd"})
                 if participant_column_name:
-                    df = df.rename(columns={f'{participant_column_name}': 'Naam'})
+                    df = df.rename(columns={f"{participant_column_name}": "Naam"})
 
                 # Drop header
                 if index_row >= 0:
@@ -212,9 +262,7 @@ class ResultProcessor:
         """
         for category in categories:
             start_index = self.df_all.index[self.df_all.iloc[:, 0] == category].tolist()[0]
-            end_index = self.df_all.index[
-                (self.df_all.index > start_index) & self.df_all.iloc[:, 0].isnull()
-            ].min()
+            end_index = self.df_all.index[(self.df_all.index > start_index) & self.df_all.iloc[:, 0].isnull()].min()
             drop_indices = list(range(start_index, end_index))
             self.df_all.drop(drop_indices, inplace=True)
 
@@ -234,9 +282,7 @@ class ResultProcessor:
         merged_rows = []
         for category in categories:
             start_index = self.df_all.index[self.df_all.iloc[:, 0] == category].tolist()[0]
-            end_index = self.df_all.index[
-                (self.df_all.index > start_index) & self.df_all.iloc[:, 0].isnull()
-            ].min()
+            end_index = self.df_all.index[(self.df_all.index > start_index) & self.df_all.iloc[:, 0].isnull()].min()
             if math.isnan(end_index):
                 end_index = self.df_all.index[-1]
             merged_rows.append(list(range(start_index, end_index + 1)))
@@ -244,7 +290,7 @@ class ResultProcessor:
         df_new = self.df_all.iloc[merged_rows]
         return df_new
 
-    def _clean_dataframe(self):
+    def _clean_dataframe(self, status_column=0):
         """
         Cleans data in the DataFrame(s) by
         - removing rows that are not considered as valid participant entries (empty/title/column lines)
@@ -252,14 +298,14 @@ class ResultProcessor:
         - removing duplicated participants
         """
         # List to iterate over, using references to the actual DataFrame objects.
-        dataframes = {'all': self.df_all, 'men': self.df_men, 'women': self.df_women}
+        dataframes = {"all": self.df_all, "men": self.df_men, "women": self.df_women}
 
         for key, df in dataframes.items():
             if df is not None:
-                df = df.dropna(subset=df.columns[1:], how='all')
+                df = df.dropna(subset=df.columns[1:], how="all")
                 df = df[~df.iloc[:, 0].isin([df.columns[0]])]
-                df = df[~df.iloc[:, 0].isin(['DQ', 'DNS', 'DNF'])]
-                df = df.drop_duplicates(subset=['Naam']).reset_index(drop=True)
+                df = df[~df.iloc[:, status_column].isin(["DQ", "DSQ", "DNS", "DNF"])]
+                df = df.drop_duplicates(subset=["Naam"]).reset_index(drop=True)
                 df = df.reset_index(drop=True)
 
                 self._update_dataframe(key, df)
@@ -273,7 +319,7 @@ class ResultProcessor:
         -----------
             time_str (str): Original time string
         """
-        parts = time_str.split(':')
+        parts = time_str.split(":")
         if len(parts) == 2:  # MM:SS format
-            return '0:' + time_str
+            return "0:" + time_str
         return time_str
