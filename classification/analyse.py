@@ -33,9 +33,10 @@ def process_race(path, race, year):
         df_women = reader.read_results(path + f"{race}/RBR_Rotterdam_04-06-2025_Vrouwen.xlsx")
         result = ResultProcessor(df_men=df_men, df_women=df_women)
     elif "Borne" in race:
-        df_men = reader.read_results(path + f"{race}/Run Bike Run Borne 24-08-2024 Uitslag Overall Mannen.xlsx")
-        df_women = reader.read_results(path + f"{race}/Run Bike Run Borne 24-08-2024 Uitslag Overall Vrouwen.xlsx")
+        df_men = reader.read_results(path + f"{race}/Run Bike Run Borne 30-08-2025 Uitslag Overall Mannen.xlsx")
+        df_women = reader.read_results(path + f"{race}/Run Bike Run Borne 30-08-2025 Uitslag Overall Vrouwen.xlsx")
         result = ResultProcessor(df_men=df_men, df_women=df_women)
+        place_string = "#Tot"
     elif "Hulsbeek" in race:
         df_all = reader.read_results(path + f"{race}/Uitslagen_aangepast.xlsx")
         result = ResultProcessor(df_all=df_all)
@@ -181,8 +182,8 @@ def calculate_points_for_year(path, year, races):
     combined_df_men = pd.merge(combined_df_men, df_ag_men, on="Naam", how="left")
     combined_df_women = pd.merge(combined_df_women, df_ag_women, on="Naam", how="left")
     print("Entries without AgeGroup:")
-    print(combined_df_men[combined_df_men["AgeGroup"].isna()])
-    print(combined_df_women[combined_df_women["AgeGroup"].isna()])
+    print(combined_df_men[combined_df_men["AgeGroup"].isna()]["Naam"].to_string(index=False))
+    print(combined_df_women[combined_df_women["AgeGroup"].isna()]["Naam"].to_string(index=False))
 
     combined_df_men["Rank_AG"] = combined_df_men.groupby("AgeGroup")["Total"].rank(method="min", ascending=False)
     combined_df_women["Rank_AG"] = combined_df_women.groupby("AgeGroup")["Total"].rank(method="min", ascending=False)
@@ -235,8 +236,8 @@ def main():
     points_columns = [col for col in results_men.columns if col.startswith("Points_")]
     columns_needed = ["Naam", "Rank", "Total"] + points_columns + ["Bonus", "Rank_AG"]
     print("Final dataframes (selected columns):")
-    print(results_men[columns_needed])
-    print(results_women[columns_needed])
+    print(results_men[columns_needed].head(10).to_markdown(index=False))
+    print(results_women[columns_needed].head(10).to_markdown(index=False))
 
     # Store dataframes in Excel file, to easily copy data in final layout
     outpath = args.path + f"/output/klassement_{args.races[-1]}/"
