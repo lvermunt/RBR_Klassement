@@ -43,125 +43,67 @@ class ResultProcessor:
         except AttributeError:
             logging.error('Race "%s" has not been implemented yet', race)
 
-    def process_results_borne(self, year=2024):
+    def process_results_borne(self, year=2026):
         """
         Process the Borne race results DataFrame according to the specified rules.
 
         Parameters:
         -----------
-            year (int, optional): Year of the race results (default is 2024).
+            year (int, optional): Year of the race results (default is 2026).
         """
-        self._process_header(4, "Totaal")
-
-        # Drop footer in excel sheet
-        self.df_men.drop(self.df_men.index[-1], inplace=True)
-        self.df_women.drop(self.df_women.index[-1], inplace=True)
+        self._process_header(-1, "Time", "Name")
 
         self._clean_dataframe()
 
-    def process_results_rotterdam(self, year=2025):
+    def process_results_rotterdam(self, year=2026):
         """
         Process the Rotterdam race results DataFrame according to the specified rules.
 
         Parameters:
         -----------
-            year (int, optional): Year of the race results (default is 2025).
+            year (int, optional): Year of the race results (default is 2026).
         """
-        self._process_header(2, "GUN TIME", "NAME")
+        self._process_header(0, "GUN TIME", "NAME")
 
-        self._clean_dataframe(status_column=8)
+        self._clean_dataframe()
 
-    def process_results_sittard(self, year=2025):
+    def process_results_almere(self, year=2026):
+        """
+        Process the Almere race results DataFrame according to the specified rules.
+
+        Parameters:
+        -----------
+            year (int, optional): Year of the race results (default is 2026).
+        """
+        self._process_header(-1, "GUN TIME", "NAME")
+
+        self._clean_dataframe()
+
+    def process_results_sittard(self, year=2026):
         """
         Process the Sittard race results DataFrame according to the specified rules.
 
         Parameters:
         -----------
-            year (int, optional): Year of the race results (default is 2025).
+            year (int, optional): Year of the race results (default is 2026).
         """
-        self._process_header(0, "TIME", "Name")
+        self._process_header(-1, "TIME", "Name")
 
         self._clean_dataframe()
 
-    def process_results_sittard_old(self, year=2024):
-        """
-        Process the Sittard race results DataFrame according to the specified rules.
-
-        Parameters:
-        -----------
-            year (int, optional): Year of the race results (default is 2024).
-        """
-        self._process_header(3)
-
-        # Find and drop participants of specific categories
-        categories_dict = {
-            2023: ["JJC, JJC JEUGD JONGENS", "MJC, JJC JEUGD MEISJES"],
-            2024: [
-                "KIDSV, IRONKIDS",
-                "KIDSM, IRONKIDS",
-                "JJC, JJC JEUGD JONGENS",
-                "MJC, JJC JEUGD MEISJES",
-            ],
-        }
-        self._drop_categories(categories_dict[year])
-
-        # Drop '(U23)' sub-string from name
-        self.df_all["Naam"] = self.df_all["Naam"].str.replace(" (U23)", "")
-
-        # Merge and remove duplicates for specified categories
-        men_categories_dict = {
-            2023: [
-                "JJ, NK JUNIOREN JONGENS",
-                "BM, NK JUNIOREN JONGENS",
-                "MAN, NK MANNEN",
-                "BMM, NK MANNEN",
-                "MT23, NK NEOSENIOREN",
-            ],
-            2024: ["JJ, NK JUNIOREN JONGENS", "MAN, NK MANNEN"],
-        }
-        women_categories_dict = {
-            2023: [
-                "VRW, NK VROUWEN",
-                "BMV, NK VROUWEN",
-                "MJ, NK JUNIOREN MEISJES",
-                "VT23, NK NEOSENIOREN",
-            ],
-            2024: ["VRW, NK VROUWEN", "MJ, NK JUNIOREN MEISJES"],
-        }
-        self.df_men = self._merge_categories(men_categories_dict[year])
-        self.df_women = self._merge_categories(women_categories_dict[year])
-
-        self._clean_dataframe()
-
-        # Ensure the 'Tijd' column has consistent format
-        for df in [self.df_men, self.df_women]:
-            df["Tijd"] = df["Tijd"].apply(self._preprocess_time)
-
-    def process_results_hulsbeek(self, year=2024):
+    def process_results_hulsbeek(self, year=2026):
         """
         Process the Hulsbeek race results DataFrame according to the specified rules.
 
         Parameters:
         -----------
-            year (int, optional): Year of the race results (default is 2024).
+            year (int, optional): Year of the race results (default is 2026).
         """
-        self._process_header(2, "tijd", "deelnemer")
-
-        # Merge and remove duplicates for specified categories
-        men_categories_dict = {
-            2024: ["Elite heren", "Recreanten mannen"],
-            2025: ["Elite heren", "Recreanten mannen"],
-        }
-        women_categories_dict = {
-            2024: ["Elite dames", "Recreanten vrouwen"],
-            2025: ["Elite dames"],
-        }
-        self.df_men = self._merge_categories(men_categories_dict[year])
-        self.df_women = self._merge_categories(women_categories_dict[year])
+        self._process_header(-1, "Finish", "Naam deelnemer")
 
         self._clean_dataframe()
 
-    def process_results_bathmen(self, year=2024):
+    def process_results_bathmen(self, year=2026):
         """
         Process the Bathmen race results DataFrame according to the specified rules.
 
@@ -169,11 +111,7 @@ class ResultProcessor:
         -----------
             year (int, optional): Year of the race results (default is 2024).
         """
-        self._process_header(0, "NETTO TIJD", "NAAM")
-
-        # Remove Duo teams
-        self.df_men = self.df_men.query("CATEGORIE != 'Duo'")
-        self.df_women = self.df_women.query("CATEGORIE != 'Duo'")
+        self._process_header(0, "GUN TIME", "NAME")
 
         self._clean_dataframe()
 
@@ -302,6 +240,7 @@ class ResultProcessor:
 
         for key, df in dataframes.items():
             if df is not None:
+                print(df)
                 df = df.dropna(subset=df.columns[1:], how="all")
                 df = df[~df.iloc[:, 0].isin([df.columns[0]])]
                 df = df[~df.iloc[:, status_column].isin(["DQ", "DSQ", "DNS", "DNF"])]

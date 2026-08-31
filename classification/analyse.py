@@ -25,27 +25,33 @@ def process_race(path, race, year):
     reader = ResultReader("excel")
     place_string = None
     if "Sittard" in race:
-        df_men = reader.read_results(path + f"{race}/RBR_Sittard_12-04-2025_Mannen.xlsx")
-        df_women = reader.read_results(path + f"{race}/RBR_Sittard_12-04-2025_Vrouwen.xlsx")
+        df_men = reader.read_results(path + f"{race}/RBR_Sittard_18-04-2026_Mannen.xlsx")
+        df_women = reader.read_results(path + f"{race}/RBR_Sittard_18-04-2026_Vrouwen.xlsx")
         result = ResultProcessor(df_men=df_men, df_women=df_women)
     elif "Rotterdam" in race:
-        df_men = reader.read_results(path + f"{race}/RBR_Rotterdam_04-06-2025_Mannen.xlsx")
-        df_women = reader.read_results(path + f"{race}/RBR_Rotterdam_04-06-2025_Vrouwen.xlsx")
+        df_men = reader.read_results(path + f"{race}/RBR_Rotterdam_28032026_Mannen.xlsx")
+        df_women = reader.read_results(path + f"{race}/RBR_Rotterdam_28032026_Vrouwen.xlsx")
+        result = ResultProcessor(df_men=df_men, df_women=df_women)
+    elif "Almere" in race:
+        df_men = reader.read_results(path + f"{race}/RBR_Almere_12042026_Mannen.xlsx")
+        df_women = reader.read_results(path + f"{race}/RBR_Almere_12042026_Vrouwen.xlsx")
         result = ResultProcessor(df_men=df_men, df_women=df_women)
     elif "Borne" in race:
-        df_men = reader.read_results(path + f"{race}/Run Bike Run Borne 30-08-2025 Uitslag Overall Mannen.xlsx")
-        df_women = reader.read_results(path + f"{race}/Run Bike Run Borne 30-08-2025 Uitslag Overall Vrouwen.xlsx")
+        df_men = reader.read_results(path + f"{race}/Run Bike Run Borne 2026 uitslagen voor RBR Series Mannen.xlsx")
+        df_women = reader.read_results(path + f"{race}/Run Bike Run Borne 2026 uitslagen voor RBR Series Vrouwen.xlsx")
         result = ResultProcessor(df_men=df_men, df_women=df_women)
-        place_string = "#Tot"
+        place_string = "Rank"
     elif "Hulsbeek" in race:
-        df_all = reader.read_results(path + f"{race}/Uitslagen_aangepast.xlsx")
-        result = ResultProcessor(df_all=df_all)
-        place_string = "uitslag"
-    elif "Bathmen" in race:
-        df_men = reader.read_results(path + f"{race}/Uitslag_man_extracted.xlsx")
-        df_women = reader.read_results(path + f"{race}/Uitslag_vrouw_extracted.xlsx")
+        df_men = reader.read_results(path + f"{race}/Run Bike Run Oldenzaal 2026 uitslagen voor RBR Series Mannen.xlsx")
+        df_women = reader.read_results(
+            path + f"{race}/Run Bike Run Oldenzaal 2026 uitslagen voor RBR Series Vrouwen.xlsx"
+        )
         result = ResultProcessor(df_men=df_men, df_women=df_women)
-        place_string = "POS"
+        place_string = "Klassering"
+    elif "Bathmen" in race:
+        df_men = reader.read_results(path + f"{race}/Run Bike Run Bathmen 2026 Mannen.xlsx")
+        df_women = reader.read_results(path + f"{race}/Run Bike Run Bathmen 2026 Vrouwen.xlsx")
+        result = ResultProcessor(df_men=df_men, df_women=df_women)
     elif "Utrecht" in race:
         df_all = reader.read_results(path + f"{race}/uitslag_DuathlonUtrecht_NTB.xlsx")
         result = ResultProcessor(df_all=df_all)
@@ -116,8 +122,8 @@ def calculate_ranks_and_totals(df):
     # Calculate the total points for each participant as the sum of points of the top 3 scores of all races
     # and add bonus points for participation in 4 and 5 races
     race_count = df.filter(regex=r"^Points").gt(0).sum(axis=1)
-    df["Bonus"] = 10 * (race_count == 4) + 20 * (race_count == 5) + 30 * (race_count == 6)
-    df["Total"] = df.filter(regex=r"^Points").apply(lambda x: x.nlargest(3).sum(), axis=1)
+    df["Bonus"] = 10 * (race_count == 6) + 20 * (race_count == 7)
+    df["Total"] = df.filter(regex=r"^Points").apply(lambda x: x.nlargest(5).sum(), axis=1)
     df["Total"] += df["Bonus"]
 
     # Sort the combined results based on total points
@@ -163,8 +169,8 @@ def calculate_points_for_year(path, year, races):
 
     # Load agegroup information
     reader = ResultReader("excel")
-    df_ag_men = reader.read_results(path + "Agegroups_mannen.xlsx")
-    df_ag_women = reader.read_results(path + "Agegroups_vrouwen.xlsx")
+    df_ag_men = reader.read_results(path + "Agegroups_mannen.xlsx").drop_duplicates()
+    df_ag_women = reader.read_results(path + "Agegroups_vrouwen.xlsx").drop_duplicates()
     df_ag_men["Naam"] = df_ag_men["Naam"].map(str.title)
     df_ag_women["Naam"] = df_ag_women["Naam"].map(str.title)
 
