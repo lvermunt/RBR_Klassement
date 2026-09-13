@@ -1,0 +1,51 @@
+[project]
+name = "RBR_Klassement"
+version = "0.0.2"
+description = "Tool for classification of the Run-Bike-Run series"
+readme = "README.md"
+requires-python = ">=3.13"
+dependencies = [
+  "polars>=1.31.0",
+  "openpyxl>=3.1.2",
+  "tabulate>=0.10.0",
+  "loguru>=0.7.3",
+]
+
+[build-system]
+requires = ["hatchling>=1.27.0"]
+build-backend = "hatchling.build"
+
+[tool.uv]
+package = true
+
+[tool.hatch.build.targets.wheel]
+packages = ["classification"]
+
+[tool.hatch.build.targets.sdist]
+include = [
+  "/classification",
+  "/README.md",
+  "/LICENSE",
+  "/pyproject.toml",
+]
+
+[dependency-groups]
+dev = [
+  "ruff>=0.16.7",
+  "ty>=0.0.80",
+  "pytest>=8.4.0",
+]
+
+[tool.ruff]
+line-length = 120
+target-version = "py313"
+
+[tool.ruff.lint]
+select = ["ALL"]
+ignore = [
+  "D203",
+  "D211",
+  "D212",
+  "D213",
+]
+

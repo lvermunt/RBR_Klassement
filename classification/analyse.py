@@ -1,29 +1,23 @@
+# Copyright (c) 2026
 """Module to calculate the classification."""
 
 import argparse
-import pandas as pd
-import numpy as np
-from classification.reader import ResultReader
+
+import polars as pl
+from loguru import logger
+
 from classification.processor import ResultProcessor
+from classification.reader import ResultReader
 from classification.scorer import ResultScorer
 
+_BONUS_COUNT_SIX = 6
+_BONUS_COUNT_SEVEN = 7
 
-def process_race(path, race, year):
-    """
-    Process individual race results and return scored DataFrames for men and women.
 
-    Parameters:
-    -----------
-        path (str): Path to directory with input and output sub-directories for the race
-        race (str): Race names for which results are to be processed.
-        year (int): Year for which race results are being calculated.
-
-    Returns:
-    --------
-        tuple: Two pandas DataFrames with the results for men and women, containing total points and ranks.
-    """
+def process_race(path: str, race: str, year: int) -> tuple[pl.DataFrame, pl.DataFrame]:
+    """Process individual race results and return scored DataFrames for men and women."""
     reader = ResultReader("excel")
-    place_string = None
+    place_string: str | None = None
     if "Sittard" in race:
         df_men = reader.read_results(path + f"{race}/RBR_Sittard_18-04-2026_Mannen.xlsx")
         df_women = reader.read_results(path + f"{race}/RBR_Sittard_18-04-2026_Vrouwen.xlsx")
@@ -42,9 +36,11 @@ def process_race(path, race, year):
         result = ResultProcessor(df_men=df_men, df_women=df_women)
         place_string = "Rank"
     elif "Hulsbeek" in race:
-        df_men = reader.read_results(path + f"{race}/Run Bike Run Oldenzaal 2026 uitslagen voor RBR Series Mannen.xlsx")
+        df_men = reader.read_results(
+            path + f"{race}/Run Bike Run Oldenzaal 2026 uitslagen voor RBR Series Mannen.xlsx",
+        )
         df_women = reader.read_results(
-            path + f"{race}/Run Bike Run Oldenzaal 2026 uitslagen voor RBR Series Vrouwen.xlsx"
+            path + f"{race}/Run Bike Run Oldenzaal 2026 uitslagen voor RBR Series Vrouwen.xlsx",
         )
         result = ResultProcessor(df_men=df_men, df_women=df_women)
         place_string = "Klassering"
@@ -57,122 +53,96 @@ def process_race(path, race, year):
         result = ResultProcessor(df_all=df_all)
         place_string = "Positie"
     else:
-        raise ValueError("Unsupported race. Not (yet) implemented.")
+        msg = "Unsupported race. Not (yet) implemented."
+        raise ValueError(msg)
 
-    # Process the input
     result.process_results(race, year)
 
-    # Calculate the assigned scores according to race result
+    if result.df_men is None or result.df_women is None:
+        msg = f"Race results for {race} are incomplete."
+        raise ValueError(msg)
     scorer_men = ResultScorer(result.df_men, race)
     scorer_women = ResultScorer(result.df_women, race)
     df_points_men = scorer_men.calculate_points("Tijd", place_string)
     df_points_women = scorer_women.calculate_points("Tijd", place_string)
 
-    # Normalise names to title case
-    df_points_men["Naam"] = df_points_men["Naam"].map(str.title)
-    df_points_women["Naam"] = df_points_women["Naam"].map(str.title)
+    df_points_men = df_points_men.with_columns(pl.col("Naam").cast(pl.String).str.to_titlecase())
+    df_points_women = df_points_women.with_columns(pl.col("Naam").cast(pl.String).str.to_titlecase())
 
-    # Return the relevant columns of the DataFrames
     return (
-        df_points_men[["Naam", f"Points_{race}", f"Rank_{race}"]],
-        df_points_women[["Naam", f"Points_{race}", f"Rank_{race}"]],
+        df_points_men.select(["Naam", f"Points_{race}", f"Rank_{race}"]),
+        df_points_women.select(["Naam", f"Points_{race}", f"Rank_{race}"]),
     )
 
 
-def merge_race_dataframes(race_dfs):
-    """
-    Merge dataframes from multiple races into a single dataframe.
+def merge_race_dataframes(race_dfs: list[pl.DataFrame]) -> pl.DataFrame:
+    """Merge multiple race dataframes into a single dataframe on the participant name."""
+    if not race_dfs:
+        msg = "At least one race dataframe is required."
+        raise ValueError(msg)
 
-    Parameters:
-    -----------
-        race_dfs (list of pd.DataFrame): A list of dataframes, each representing results from different races.
-
-    Returns:
-    --------
-        pd.DataFrame: A single dataframe merged from all input race dataframes on 'Naam'.
-    """
     combined_df = race_dfs[0]
     for df in race_dfs[1:]:
-        combined_df = pd.merge(combined_df, df, on="Naam", how="outer")
+        combined_df = combined_df.join(df, on="Naam", how="full")
     return combined_df
 
 
-def calculate_ranks_and_totals(df):
-    """
-    Calculate and assign ranks and totals for the combined dataframe.
+def calculate_ranks_and_totals(df: pl.DataFrame) -> pl.DataFrame:
+    """Calculate totals and rank columns for a combined classification dataframe."""
+    rank_columns = [column for column in df.columns if column.startswith("Rank_")]
+    max_ranks = len(rank_columns)
 
-    This function adds a 'Bonus' for participants based on their participation in multiple races,
-    calculates 'Total' points considering the top 3 scores, sorts by 'Total' points and rank tier, and
-    assigns a final rank considering tie-breaking rules based on highest individual race ranks.
-
-    Parameters:
-    -----------
-        df (pd.DataFrame): DataFrame containing points and ranks from multiple races for participants.
-    """
-    # Create columns for additional sorting in case of tie's based on highest rank
-    rank_columns = df.filter(like="Rank_")
-    max_ranks = len(rank_columns.columns)
     for idx in range(max_ranks):
         column_name = f"Top{idx + 1}_Rank"
-        df[column_name] = rank_columns.apply(
-            lambda x, rank=idx + 1: (x.nsmallest(rank).iloc[-1] if x.nsmallest(rank).size > 0 else np.nan),
-            axis=1,
-        )
+        values = []
+        for row in df.iter_rows(named=True):
+            values_in_row = [float(row[col]) for col in rank_columns if row[col] not in (None, "", 0)]
+            if not values_in_row:
+                values.append(None)
+                continue
+            values.append(sorted(values_in_row)[idx] if len(values_in_row) > idx else None)
+        df = df.with_columns(pl.Series(name=column_name, values=values))
 
-    # Calculate the total points for each participant as the sum of points of the top 3 scores of all races
-    # and add bonus points for participation in 4 and 5 races
-    race_count = df.filter(regex=r"^Points").gt(0).sum(axis=1)
-    df["Bonus"] = 10 * (race_count == 6) + 20 * (race_count == 7)
-    df["Total"] = df.filter(regex=r"^Points").apply(lambda x: x.nlargest(5).sum(), axis=1)
-    df["Total"] += df["Bonus"]
+    bonus_values = []
+    for row in df.iter_rows(named=True):
+        point_columns = [column for column in df.columns if column.startswith("Points_")]
+        counted = sum(1 for column in point_columns if row.get(column) not in (None, "", 0))
+        if counted == _BONUS_COUNT_SIX:
+            bonus_values.append(10)
+        elif counted == _BONUS_COUNT_SEVEN:
+            bonus_values.append(20)
+        else:
+            bonus_values.append(0)
+    df = df.with_columns(pl.Series(name="Bonus", values=bonus_values))
 
-    # Sort the combined results based on total points
-    sort_col = ["Total"] + [f"Top{idx + 1}_Rank" for idx in range(max_ranks)]
-    df = df.sort_values(by=sort_col, ascending=[False] + [True] * max_ranks)
+    total_values = []
+    for row in df.iter_rows(named=True):
+        point_columns = [column for column in df.columns if column.startswith("Points_")]
+        points = [float(row[column]) for column in point_columns if row.get(column) not in (None, "", 0)]
+        total_values.append(sum(sorted(points, reverse=True)[:5]) + row["Bonus"])
+    df = df.with_columns(pl.Series(name="Total", values=total_values))
 
-    # Calculate rank based on 'Total'. Tie breaker is based on highest rank in individual races
-    df["Rank"] = (
-        df.apply(
-            lambda row: tuple(
-                [row["Total"]] + [-row[col] if pd.notna(row[col]) else float("inf") for col in sort_col[1:]]
-            ),
-            axis=1,
-        )
-        .rank(method="min", ascending=False)
-        .astype(int)
-    )
-
-    return df
+    sort_columns = ["Total"] + [f"Top{idx + 1}_Rank" for idx in range(max_ranks)]
+    df = df.sort(by=sort_columns, descending=[True] + [False] * max_ranks)
+    return df.with_columns(pl.Series(name="Rank", values=list(range(1, df.height + 1))))
 
 
-def calculate_points_for_year(path, year, races):
-    """
-    Calculate points for participants based on race results for a given year and list of races.
-
-    Parameters:
-    -----------
-        path (str): Path to directory with input and output sub-directories for various races
-        year (int): Year for which race results are being calculated.
-        races (list): List of race names for which results are to be processed.
-
-    Returns:
-    --------
-        tuple: Two pandas DataFrames with combined results for men and women, containing total points and ranks.
-    """
+def calculate_points_for_year(path: str, year: int, races: list[str]) -> tuple[pl.DataFrame, pl.DataFrame]:
+    """Calculate points for participants based on race results for a given year."""
     path = path + f"/input/{year}/"
-    race_dfs_men, race_dfs_women = [], []
+    race_dfs_men: list[pl.DataFrame] = []
+    race_dfs_women: list[pl.DataFrame] = []
 
     for race in races:
         df_points_men, df_points_women = process_race(path, race, year)
         race_dfs_men.append(df_points_men)
         race_dfs_women.append(df_points_women)
 
-    # Load agegroup information
     reader = ResultReader("excel")
-    df_ag_men = reader.read_results(path + "Agegroups_mannen.xlsx").drop_duplicates()
-    df_ag_women = reader.read_results(path + "Agegroups_vrouwen.xlsx").drop_duplicates()
-    df_ag_men["Naam"] = df_ag_men["Naam"].map(str.title)
-    df_ag_women["Naam"] = df_ag_women["Naam"].map(str.title)
+    df_ag_men = reader.read_results(path + "Agegroups_mannen.xlsx").unique(subset=["Naam"], maintain_order=True)
+    df_ag_women = reader.read_results(path + "Agegroups_vrouwen.xlsx").unique(subset=["Naam"], maintain_order=True)
+    df_ag_men = df_ag_men.with_columns(pl.col("Naam").cast(pl.String).str.to_titlecase())
+    df_ag_women = df_ag_women.with_columns(pl.col("Naam").cast(pl.String).str.to_titlecase())
 
     combined_df_men = merge_race_dataframes(race_dfs_men)
     combined_df_women = merge_race_dataframes(race_dfs_women)
@@ -180,75 +150,60 @@ def calculate_points_for_year(path, year, races):
     combined_df_men = calculate_ranks_and_totals(combined_df_men)
     combined_df_women = calculate_ranks_and_totals(combined_df_women)
 
-    # Sort DataFrames on rank, which takes ties properly into account
-    combined_df_men = combined_df_men.sort_values(by=["Rank"])
-    combined_df_women = combined_df_women.sort_values(by=["Rank"])
+    combined_df_men = combined_df_men.sort("Rank")
+    combined_df_women = combined_df_women.sort("Rank")
 
-    # Add AG information and calculate ranking
-    combined_df_men = pd.merge(combined_df_men, df_ag_men, on="Naam", how="left")
-    combined_df_women = pd.merge(combined_df_women, df_ag_women, on="Naam", how="left")
-    print("Entries without AgeGroup:")
-    print(combined_df_men[combined_df_men["AgeGroup"].isna()]["Naam"].to_string(index=False))
-    print(combined_df_women[combined_df_women["AgeGroup"].isna()]["Naam"].to_string(index=False))
+    combined_df_men = combined_df_men.join(df_ag_men, on="Naam", how="left")
+    combined_df_women = combined_df_women.join(df_ag_women, on="Naam", how="left")
 
-    combined_df_men["Rank_AG"] = combined_df_men.groupby("AgeGroup")["Total"].rank(method="min", ascending=False)
-    combined_df_women["Rank_AG"] = combined_df_women.groupby("AgeGroup")["Total"].rank(method="min", ascending=False)
-    combined_df_men["Rank_AG"] = (
-        combined_df_men["Rank_AG"].astype(int).astype(str) + " (" + combined_df_men["AgeGroup"] + ")"
-    )
-    combined_df_women["Rank_AG"] = (
-        combined_df_women["Rank_AG"].astype(int).astype(str) + " (" + combined_df_women["AgeGroup"] + ")"
-    )
+    missing_men = combined_df_men.filter(pl.col("AgeGroup").is_null()).get_column("Naam").to_list()
+    missing_women = combined_df_women.filter(pl.col("AgeGroup").is_null()).get_column("Naam").to_list()
+    logger.info("Entries without AgeGroup: {} / {}", missing_men, missing_women)
 
-    # Fill NaN values with -1 for now
-    combined_df_men = combined_df_men.fillna(-1)
-    combined_df_women = combined_df_women.fillna(-1)
-    combined_df_men["Bonus"] = combined_df_men["Bonus"].replace(0, -1)
-    combined_df_women["Bonus"] = combined_df_women["Bonus"].replace(0, -1)
+    rank_ag_men = []
+    for group_name, group_df in combined_df_men.group_by("AgeGroup", maintain_order=True):
+        ranked = group_df.sort("Total", descending=True)
+        rank_map = {row["Naam"]: idx for idx, row in enumerate(ranked.iter_rows(named=True), start=1)}
+        items = [f"{rank_map[row['Naam']]} ({group_name})" for row in group_df.iter_rows(named=True)]
+        rank_ag_men.extend(items)
+    combined_df_men = combined_df_men.with_columns(pl.Series(name="Rank_AG", values=rank_ag_men))
 
-    # Convert all numeric columns to integers
-    numeric_cols = combined_df_men.select_dtypes(include="number").columns
-    combined_df_men[numeric_cols] = combined_df_men[numeric_cols].astype(int)
-    combined_df_women[numeric_cols] = combined_df_women[numeric_cols].astype(int)
+    rank_ag_women = []
+    for group_name, group_df in combined_df_women.group_by("AgeGroup", maintain_order=True):
+        ranked = group_df.sort("Total", descending=True)
+        rank_map = {row["Naam"]: idx for idx, row in enumerate(ranked.iter_rows(named=True), start=1)}
+        items = [f"{rank_map[row['Naam']]} ({group_name})" for row in group_df.iter_rows(named=True)]
+        rank_ag_women.extend(items)
+    combined_df_women = combined_df_women.with_columns(pl.Series(name="Rank_AG", values=rank_ag_women))
 
-    # Fill NaN values (represented by -1) with empty string
-    combined_df_men[numeric_cols] = combined_df_men[numeric_cols].replace(-1, "").astype(object)
-    combined_df_women[numeric_cols] = combined_df_women[numeric_cols].replace(-1, "").astype(object)
+    combined_df_men = combined_df_men.fill_null(-1)
+    combined_df_women = combined_df_women.fill_null(-1)
+    combined_df_men = combined_df_men.with_columns(pl.col("Bonus").replace(0, -1))
+    combined_df_women = combined_df_women.with_columns(pl.col("Bonus").replace(0, -1))
 
     return combined_df_men, combined_df_women
 
 
-def main():
-    """
-    Main function to process race results and calculate points.
-
-    Parser arguments:
-    -----------
-        path (str): Path to directory with input and output sub-directories for various races
-        year (int): The year of the races.
-        races (list of str): A list containing the names of the races to process.
-    """
+def main() -> None:
+    """Process race results and calculate points."""
     parser = argparse.ArgumentParser(description="Process race results and calculate points.")
     parser.add_argument("path", type=str, help="Path to directory with input and output folders")
     parser.add_argument("year", type=int, help="Year of the races")
     parser.add_argument("races", nargs="+", help="List of races")
     args = parser.parse_args()
 
-    # Your code for processing race results and calculating points goes here
-    print(f"Processing results for year {args.year} and races: {', '.join(args.races)}")
+    logger.info("Processing results for year {} and races: {}", args.year, ", ".join(args.races))
     results_men, results_women = calculate_points_for_year(args.path, args.year, args.races)
 
-    # Print the final dataframes to quickly check if everything is OK
     points_columns = [col for col in results_men.columns if col.startswith("Points_")]
-    columns_needed = ["Naam", "Rank", "Total"] + points_columns + ["Bonus", "Rank_AG"]
-    print("Final dataframes (selected columns):")
-    print(results_men[columns_needed].head(10).to_markdown(index=False))
-    print(results_women[columns_needed].head(10).to_markdown(index=False))
+    columns_needed = ["Naam", "Rank", "Total", *points_columns, "Bonus", "Rank_AG"]
+    logger.info("Final dataframes (selected columns):")
+    logger.info("{}", results_men.select(columns_needed).head(10))
+    logger.info("{}", results_women.select(columns_needed).head(10))
 
-    # Store dataframes in Excel file, to easily copy data in final layout
     outpath = args.path + f"/output/klassement_{args.races[-1]}/"
-    results_men[columns_needed].to_excel(f"{outpath}/Klassement_{args.races[-1]}_Man.xlsx", index=False)
-    results_women[columns_needed].to_excel(f"{outpath}/Klassement_{args.races[-1]}_Vrouw.xlsx", index=False)
+    results_men.select(columns_needed).write_excel(f"{outpath}/Klassement_{args.races[-1]}_Man.xlsx")
+    results_women.select(columns_needed).write_excel(f"{outpath}/Klassement_{args.races[-1]}_Vrouw.xlsx")
 
 
 if __name__ == "__main__":

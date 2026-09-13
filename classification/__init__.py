@@ -1,10 +1,2 @@
-"""
-RBR Classification analysis module
-"""
-
-
-def entrypoint():
-    """
-    This is the entrypoint: call it from command line
-    """
-    print("Hello, world!\n")
+# Copyright (c) 2026
+"""Classification package."""

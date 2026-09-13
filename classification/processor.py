@@ -1,156 +1,99 @@
+# Copyright (c) 2026
 """Module to process the race results."""
 
-import logging
-import math
+import polars as pl
+from loguru import logger
+
+_UTRECHT_2024_YEAR = 2024
+_UTRECHT_2025_YEAR = 2025
+_TIME_PART_COUNT = 2
 
 
-# pylint: disable=too-few-public-methods
 class ResultProcessor:
-    """
-    A class to process the race results stored in DataFrames.
-    """
+    """Process race results stored in Polars DataFrames."""
 
-    def __init__(self, df_all=None, df_men=None, df_women=None):
-        """
-        Initialises the ResultProcessor with race results DataFrames. Either a combined (df_all), or
-        two gender-separated dataframes (df_men and df_women) have to be provided.
-
-        Parameters:
-        ----------
-            df_all (pd.DataFrame, optional): DataFrame containing combined race results.
-            df_men (pd.DataFrame, optional): DataFrame containing men's race results.
-            df_women (pd.DataFrame, optional): DataFrame containing women's race results.
-        """
+    def __init__(
+        self,
+        df_all: pl.DataFrame | None = None,
+        df_men: pl.DataFrame | None = None,
+        df_women: pl.DataFrame | None = None,
+    ) -> None:
+        """Initialize the processor with one or more result frames."""
         self.df_all = df_all
         self.df_men = df_men
         self.df_women = df_women
 
         if (df_all is None and df_men is None) or (df_all is None and df_women is None):
-            raise ValueError("Either a combined or gender-separated dataframe required!")
+            msg = "Either a combined or gender-separated dataframe required!"
+            raise ValueError(msg)
 
-    def process_results(self, race, year=2024):
-        """
-        Processes results for a specific race and year.
-
-        Parameters:
-        -----------
-            race (string): Name of the race to be processed.
-            year (int, optional): Year of the race results (default is 2024).
-        """
+    def process_results(self, race: str, year: int = 2024) -> None:
+        """Process results for a specific race and year."""
         try:
             processing_method = getattr(self, f"process_results_{race.lower()}")
             processing_method(year)
         except AttributeError:
-            logging.error('Race "%s" has not been implemented yet', race)
+            logger.error('Race "%s" has not been implemented yet', race)
 
-    def process_results_borne(self, year=2026):
-        """
-        Process the Borne race results DataFrame according to the specified rules.
-
-        Parameters:
-        -----------
-            year (int, optional): Year of the race results (default is 2026).
-        """
+    def process_results_borne(self, _year: int = 2026) -> None:
+        """Process the Borne race format."""
         self._process_header(-1, "Time", "Name")
-
         self._clean_dataframe()
 
-    def process_results_rotterdam(self, year=2026):
-        """
-        Process the Rotterdam race results DataFrame according to the specified rules.
-
-        Parameters:
-        -----------
-            year (int, optional): Year of the race results (default is 2026).
-        """
+    def process_results_rotterdam(self, _year: int = 2026) -> None:
+        """Process the Rotterdam race format."""
         self._process_header(0, "GUN TIME", "NAME")
-
         self._clean_dataframe()
 
-    def process_results_almere(self, year=2026):
-        """
-        Process the Almere race results DataFrame according to the specified rules.
-
-        Parameters:
-        -----------
-            year (int, optional): Year of the race results (default is 2026).
-        """
+    def process_results_almere(self, _year: int = 2026) -> None:
+        """Process the Almere race format."""
         self._process_header(-1, "GUN TIME", "NAME")
-
         self._clean_dataframe()
 
-    def process_results_sittard(self, year=2026):
-        """
-        Process the Sittard race results DataFrame according to the specified rules.
-
-        Parameters:
-        -----------
-            year (int, optional): Year of the race results (default is 2026).
-        """
+    def process_results_sittard(self, _year: int = 2026) -> None:
+        """Process the Sittard race format."""
         self._process_header(-1, "TIME", "Name")
-
+        if self.df_all is not None and self.df_men is None and self.df_women is None:
+            self.df_men = self.df_all.clone()
+            self.df_women = self.df_all.clone()
         self._clean_dataframe()
 
-    def process_results_hulsbeek(self, year=2026):
-        """
-        Process the Hulsbeek race results DataFrame according to the specified rules.
-
-        Parameters:
-        -----------
-            year (int, optional): Year of the race results (default is 2026).
-        """
+    def process_results_hulsbeek(self, _year: int = 2026) -> None:
+        """Process the Hulsbeek race format."""
         self._process_header(-1, "Finish", "Naam deelnemer")
-
         self._clean_dataframe()
 
-    def process_results_bathmen(self, year=2026):
-        """
-        Process the Bathmen race results DataFrame according to the specified rules.
-
-        Parameters:
-        -----------
-            year (int, optional): Year of the race results (default is 2024).
-        """
+    def process_results_bathmen(self, _year: int = 2026) -> None:
+        """Process the Bathmen race format."""
         self._process_header(0, "GUN TIME", "NAME")
-
         self._clean_dataframe()
 
-    def process_results_utrecht(self, year=2025):
-        """
-        Process the Utrecht race results DataFrame according to the specified rules.
-
-        Parameters:
-        -----------
-            year (int, optional): Year of the race results (default is 2024).
-        """
+    def process_results_utrecht(self, year: int = 2025) -> None:
+        """Process the Utrecht race format."""
         self._process_header(-1, "Eindtijd", "Deelnemer")
+        if self.df_all is None:
+            msg = "Utrecht results require a combined dataframe input."
+            raise ValueError(msg)
+        df_all = self.df_all
 
-        self.df_men = self.df_all.query("`m/v` == 'm'")
-        if year == 2024:
-            self.df_men = self.df_men.query("Wedstrijd == '86310 (E+R M)' or Wedstrijd == '86327 (R)'")
-        elif year == 2025:
-            self.df_men = self.df_men.query("Wedstrijd == '90782 (E M)' or Wedstrijd == '90790 (R M)'")
+        self.df_men = df_all.filter(pl.col("`m/v`") == "m")
+        if year == _UTRECHT_2024_YEAR:
+            self.df_men = self.df_men.filter(pl.col("Wedstrijd").is_in(["86310 (E+R M)", "86327 (R)"]))
+        elif year == _UTRECHT_2025_YEAR:
+            self.df_men = self.df_men.filter(pl.col("Wedstrijd").is_in(["90782 (E M)", "90790 (R M)"]))
 
-        self.df_women = self.df_all.query("`m/v` == 'v'")
-        if year == 2024:
-            self.df_women = self.df_women.query("Wedstrijd == '86323 (E+R V)' or Wedstrijd == '86327 (R)'")
-        elif year == 2025:
-            self.df_women = self.df_women.query("Wedstrijd == '90786 (E+R V)'")
+        self.df_women = df_all.filter(pl.col("`m/v`") == "v")
+        if year == _UTRECHT_2024_YEAR:
+            self.df_women = self.df_women.filter(pl.col("Wedstrijd").is_in(["86323 (E+R V)", "86327 (R)"]))
+        elif year == _UTRECHT_2025_YEAR:
+            self.df_women = self.df_women.filter(pl.col("Wedstrijd").is_in(["90786 (E+R V)"]))
 
-        self.df_men = self.df_men.drop(columns="Wedstrijd")
-        self.df_women = self.df_women.drop(columns="Wedstrijd")
-
+        self.df_men = self.df_men.drop("Wedstrijd")
+        self.df_women = self.df_women.drop("Wedstrijd")
         self._clean_dataframe()
 
-    def _update_dataframe(self, key, df):
-        """
-        Updates the specific DataFrame attribute based on the provided key.
-
-        Parameters:
-        -----------
-            key (str): Key identifying which DataFrame to update ('all', 'men', 'women').
-            df (pd.DataFrame): The DataFrame to set for the specified key.
-        """
+    def _update_dataframe(self, key: str, df: pl.DataFrame | None) -> None:
+        """Set the dataframe for the selected key."""
         if key == "all":
             self.df_all = df
         elif key == "men":
@@ -158,107 +101,110 @@ class ResultProcessor:
         elif key == "women":
             self.df_women = df
 
-    def _process_header(self, index_row, time_column_name=None, participant_column_name=None):
-        """
-        Process the header of the loaded excel/txt files
+    def _resolve_header_index(self, frame: pl.DataFrame, index_row: int) -> int:
+        """Find the row that contains the actual result headers."""
+        if index_row != -1:
+            return index_row
 
-        Parameters:
-        -----------
-            index_row (int): The index of the row that contains the column names.
-            time_column_name (str, optional): Original column name for total time.
-            participant_column_name (str, optional): Original column name for participants names.
-        """
-        # List to iterate over, using references to the actual DataFrame objects.
+        for row_idx in range(frame.height):
+            row_values = [value for value in frame.row(row_idx) if value is not None]
+            if any(str(value).strip() in {"Naam", "Name", "Deelnemer"} for value in row_values):
+                return row_idx
+        return index_row
+
+    def _rename_target_column(self, frame: pl.DataFrame, candidates: list[str], target: str) -> pl.DataFrame:
+        """Rename the selected target column if it exists."""
+        for candidate in candidates:
+            if candidate in frame.columns:
+                return frame.rename({candidate: target})
+        return frame
+
+    def _process_header(
+        self,
+        index_row: int,
+        time_column_name: str | None = None,
+        participant_column_name: str | None = None,
+    ) -> None:
+        """Rename the result table headers to the project's canonical names."""
         dataframes = {"all": self.df_all, "men": self.df_men, "women": self.df_women}
+        for key, current_frame in dataframes.items():
+            if current_frame is None:
+                continue
 
-        for key, df in dataframes.items():
-            if df is not None:
-                # Rename columns
-                if index_row >= 0:
-                    new_column_names = df.iloc[index_row].to_dict()
-                    df.rename(columns=new_column_names, inplace=True)
+            processed_frame = current_frame
+            header_index = self._resolve_header_index(processed_frame, index_row)
+            if header_index >= 0:
+                header_row = [None if value is None else str(value) for value in processed_frame.row(header_index)]
+                new_frame = processed_frame.clone()
+                new_frame.columns = [
+                    f"column_{idx}" if value in (None, "") else value for idx, value in enumerate(header_row)
+                ]
+                processed_frame = new_frame.slice(header_index + 1)
 
-                # General column names
-                if time_column_name:
-                    df = df.rename(columns={f"{time_column_name}": "Tijd"})
-                if participant_column_name:
-                    df = df.rename(columns={f"{participant_column_name}": "Naam"})
+            if time_column_name:
+                processed_frame = self._rename_target_column(
+                    processed_frame,
+                    [
+                        time_column_name,
+                        "Tijd",
+                        "Time",
+                        "GUN TIME",
+                        "Eindtijd",
+                        "Finish",
+                        "TIME",
+                    ],
+                    "Tijd",
+                )
 
-                # Drop header
-                if index_row >= 0:
-                    df.drop(df.index[0], inplace=True)
+            if participant_column_name:
+                processed_frame = self._rename_target_column(
+                    processed_frame,
+                    [
+                        participant_column_name,
+                        "Naam",
+                        "Name",
+                        "Deelnemer",
+                        "Participant",
+                    ],
+                    "Naam",
+                )
 
-                self._update_dataframe(key, df)
+            self._update_dataframe(key, processed_frame)
 
-    def _drop_categories(self, categories):
-        """
-        Drop participants listed from certain categories.
-
-        Parameters:
-        -----------
-            categories (list): List of categories to remove.
-        """
-        for category in categories:
-            start_index = self.df_all.index[self.df_all.iloc[:, 0] == category].tolist()[0]
-            end_index = self.df_all.index[(self.df_all.index > start_index) & self.df_all.iloc[:, 0].isnull()].min()
-            drop_indices = list(range(start_index, end_index))
-            self.df_all.drop(drop_indices, inplace=True)
-
-    def _merge_categories(self, categories):
-        """
-        Merge participants of specified categories.
-
-        Parameters:
-        -----------
-            categories (list): List of categories to merge.
-        """
-        # Remove rows that are not participants before merging
-        self.df_all = self.df_all[~self.df_all.iloc[:, 0].isin([self.df_all.columns[0]])]
-        self.df_all = self.df_all.reset_index(drop=True)
-
-        # Merge specified categories
-        merged_rows = []
-        for category in categories:
-            start_index = self.df_all.index[self.df_all.iloc[:, 0] == category].tolist()[0]
-            end_index = self.df_all.index[(self.df_all.index > start_index) & self.df_all.iloc[:, 0].isnull()].min()
-            if math.isnan(end_index):
-                end_index = self.df_all.index[-1]
-            merged_rows.append(list(range(start_index, end_index + 1)))
-        merged_rows = [row for cat_rows in merged_rows for row in cat_rows]
-        df_new = self.df_all.iloc[merged_rows]
-        return df_new
-
-    def _clean_dataframe(self, status_column=0):
-        """
-        Cleans data in the DataFrame(s) by
-        - removing rows that are not considered as valid participant entries (empty/title/column lines)
-        - removing participants that had DQ, DNS, or DNF
-        - removing duplicated participants
-        """
-        # List to iterate over, using references to the actual DataFrame objects.
+    def _clean_dataframe(self, status_column: int = 0) -> None:
+        """Remove incomplete or invalid rows from the processed dataframe."""
         dataframes = {"all": self.df_all, "men": self.df_men, "women": self.df_women}
+        for key, current_frame in dataframes.items():
+            if current_frame is None:
+                continue
 
-        for key, df in dataframes.items():
-            if df is not None:
-                print(df)
-                df = df.dropna(subset=df.columns[1:], how="all")
-                df = df[~df.iloc[:, 0].isin([df.columns[0]])]
-                df = df[~df.iloc[:, status_column].isin(["DQ", "DSQ", "DNS", "DNF"])]
-                df = df.drop_duplicates(subset=["Naam"]).reset_index(drop=True)
-                df = df.reset_index(drop=True)
+            processed_frame = current_frame
+            if "Naam" in processed_frame.columns and "Tijd" in processed_frame.columns:
+                processed_frame = processed_frame.filter(
+                    pl.col("Naam").is_not_null() & pl.col("Tijd").is_not_null(),
+                )
 
-                self._update_dataframe(key, df)
+            if processed_frame.columns:
+                first_column = processed_frame.columns[0]
+                processed_frame = processed_frame.filter(
+                    ~pl.col(first_column).is_in(["Plaats", "Naam", "Deelnemer", "Name"]),
+                )
+
+            if processed_frame.columns and status_column < processed_frame.width:
+                status_field = processed_frame.columns[status_column]
+                processed_frame = processed_frame.filter(
+                    ~pl.col(status_field).is_in(["DQ", "DSQ", "DNS", "DNF"]),
+                )
+
+            if "Naam" in processed_frame.columns:
+                processed_frame = processed_frame.unique(subset=["Naam"], maintain_order=True)
+
+            self._update_dataframe(key, processed_frame)
 
     @staticmethod
-    def _preprocess_time(time_str):
-        """
-        Update time format, so pandas can properly sort it
-
-        Parameters:
-        -----------
-            time_str (str): Original time string
-        """
+    def _preprocess_time(time_str: str) -> str:
+        """Normalize time values for sorting."""
         parts = time_str.split(":")
-        if len(parts) == 2:  # MM:SS format
+        if len(parts) == _TIME_PART_COUNT:
             return "0:" + time_str
         return time_str
