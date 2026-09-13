@@ -1,68 +1,44 @@
-"""Module to read in the race results"""
+# Copyright (c) 2026
+"""Read race results from supported file formats."""
 
-import pandas as pd
+import polars as pl
+from openpyxl import load_workbook
 
 
-# pylint: disable=too-few-public-methods
 class ResultReader:
-    """
-    A class to read race results from different file formats.
-    """
+    """Read race results from different file formats."""
 
-    def __init__(self, file_format):
-        """
-        Initialises the ResultReader with the specified file format.
-
-        Parameters:
-        -----------
-            file_format (str): The format of the result file ('excel', 'text', etc.).
-        """
+    def __init__(self, file_format: str) -> None:
+        """Initialize the ResultReader with the specified file format."""
         self.file_format = file_format
 
-    def read_results(self, file_path):
-        """
-        Reads race results from the given file.
-
-        Parameters:
-        -----------
-            file_path (str): The path to the result file.
-
-        Returns:
-        --------
-            pd.DataFrame: A DataFrame containing the race results.
-        """
+    def read_results(self, file_path: str) -> pl.DataFrame:
+        """Read race results from the given file."""
         if self.file_format == "excel":
             return self._read_excel_results(file_path)
         if self.file_format == "text":
             return self._read_text_results(file_path)
-        raise ValueError(
-            "Unsupported file format. Only 'excel' and 'text' are supported."
-        )
+        msg = "Unsupported file format. Only 'excel' and 'text' are supported."
+        raise ValueError(msg)
 
-    def _read_excel_results(self, file_path):
-        """
-        Reads race results from an Excel file.
+    def _read_excel_results(self, file_path: str) -> pl.DataFrame:
+        """Read a race result from an Excel file while preserving row-oriented worksheet data."""
+        workbook = load_workbook(file_path, read_only=True, data_only=True)
+        sheet = workbook.active
+        rows: list[tuple[object, ...]] = []
 
-        Parameters:
-        -----------
-            file_path (str): The path to the Excel file.
+        for row in sheet.iter_rows(values_only=True):
+            if all(value is None for value in row):
+                continue
+            rows.append(tuple(value for value in row))
 
-        Returns:
-        --------
-            pd.DataFrame: A DataFrame containing the race results.
-        """
-        return pd.read_excel(file_path)
+        if not rows:
+            return pl.DataFrame()
 
-    def _read_text_results(self, file_path):
-        """
-        Reads race results from a text file.
+        width = max(len(row) for row in rows)
+        padded_rows = [tuple(row + (None,) * (width - len(row))) for row in rows]
+        return pl.DataFrame(padded_rows, orient="row")
 
-        Parameters:
-        -----------
-            file_path (str): The path to the text file.
-
-        Returns:
-        --------
-            pd.DataFrame: A DataFrame containing the race results.
-        """
-        return pd.read_csv(file_path, delimiter="\t")
+    def _read_text_results(self, file_path: str) -> pl.DataFrame:
+        """Read a race result from a tab-delimited text file."""
+        return pl.read_csv(file_path, separator="\t")

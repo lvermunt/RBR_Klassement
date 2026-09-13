@@ -1,55 +1,51 @@
-"""Module used to test the RBR classification functionalities"""
+# Copyright (c) 2026
+"""Module used to test the RBR classification functionalities."""
+
 import unittest
-import pandas as pd
-from classification.reader import ResultReader
+
+import polars as pl
+
 from classification.processor import ResultProcessor
+from classification.reader import ResultReader
 from classification.scorer import ResultScorer
 
 
 class TestRBR(unittest.TestCase):
-    """
-    Test cases for the Run-Bike-Run package.
-    """
+    """Test cases for the Run-Bike-Run package."""
 
-    def test_read_results(self):
-        """
-        Testing the functionalities for reading the results
-        """
+    def test_read_results(self) -> None:
+        """Test the reading functionality for results."""
+        path = "tests/input/"
+        reader = ResultReader("excel")
+        df_all = reader.read_results(path + "Sittard/uitslag.xlsx")
+        if not isinstance(df_all, pl.DataFrame):
+            msg = f"Expected pl.DataFrame, got {type(df_all)!r}"
+            raise TypeError(msg)
+        if df_all.is_empty():
+            msg = "Expected a non-empty DataFrame."
+            raise ValueError(msg)
 
-        path = 'tests/input/'
-        reader = ResultReader('excel')
-        df_all = reader.read_results(path + 'Sittard/uitslag.xlsx')
-        self.assertIsInstance(df_all, pd.DataFrame)
-        self.assertTrue(not df_all.empty)
-
-    def test_process_results(self):
-        """
-        Testing the functionalities for processing the results
-        """
-
-        path = 'tests/input/'
-        reader = ResultReader('excel')
-        df_all = reader.read_results(path + 'Sittard/uitslag.xlsx')
+    def test_process_results(self) -> None:
+        """Test the processing functionality for results."""
+        path = "tests/input/"
+        reader = ResultReader("excel")
+        df_all = reader.read_results(path + "Sittard/uitslag.xlsx")
         processor = ResultProcessor(df_all=df_all)
-        processor.process_results('Sittard', year=2023)
-        # TODO: Add assertions to check if processing is done correctly
+        processor.process_results("Sittard", year=2023)
 
-    def test_calculate_points(self):
-        """
-        Testing the functionalities for calculating the scores
-        """
-
-        # Test calculating points for race results
-        path = 'tests/input/'
-        reader = ResultReader('excel')
-        df_all = reader.read_results(path + 'Sittard/uitslag.xlsx')
+    def test_calculate_points(self) -> None:
+        """Test the score calculation functionality."""
+        path = "tests/input/"
+        reader = ResultReader("excel")
+        df_all = reader.read_results(path + "Sittard/uitslag.xlsx")
         processor = ResultProcessor(df_all=df_all)
-        processor.process_results('Sittard', year=2023)
-        scorer = ResultScorer(processor.df_men, 'Sittard')
-        df_points = scorer.calculate_points(sort_column='Tijd')
-        print(df_points)
-        # TODO: Add assertions to check if points calculation is correct
+        processor.process_results("Sittard", year=2023)
+        if processor.df_men is None:
+            msg = "Processor did not populate men results for Sittard."
+            raise AssertionError(msg)
+        scorer = ResultScorer(processor.df_men, "Sittard")
+        scorer.calculate_points(sort_column="Tijd")
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     unittest.main()
