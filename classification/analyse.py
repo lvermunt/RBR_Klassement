@@ -101,6 +101,9 @@ def merge_race_dataframes(race_dfs):
         df = df.copy()
         df["Naam"] = df["Naam"].map(normalize_name)
         combined_df = pd.merge(combined_df, df, on="Naam", how="outer")
+
+    combined_df["Naam"] = combined_df["Naam"].map(normalize_name)
+    combined_df = combined_df.drop_duplicates(subset=["Naam"]).reset_index(drop=True)
     return combined_df
 
 
@@ -194,6 +197,10 @@ def calculate_points_for_year(path, year, races):
     # Add AG information and calculate ranking
     combined_df_men = pd.merge(combined_df_men, df_ag_men, on="Naam", how="left")
     combined_df_women = pd.merge(combined_df_women, df_ag_women, on="Naam", how="left")
+    combined_df_men["Naam"] = combined_df_men["Naam"].map(normalize_name)
+    combined_df_women["Naam"] = combined_df_women["Naam"].map(normalize_name)
+    combined_df_men = combined_df_men.drop_duplicates(subset=["Naam"]).reset_index(drop=True)
+    combined_df_women = combined_df_women.drop_duplicates(subset=["Naam"]).reset_index(drop=True)
     print("Entries without AgeGroup:")
     print(combined_df_men[combined_df_men["AgeGroup"].isna()]["Naam"].to_string(index=False))
     print(combined_df_women[combined_df_women["AgeGroup"].isna()]["Naam"].to_string(index=False))
