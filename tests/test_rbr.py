@@ -1,8 +1,12 @@
-"""Module used to test the RBR classification functionalities"""
+"""Module used to test the RBR classification functionalities."""
+
 import unittest
+
 import pandas as pd
-from classification.reader import ResultReader
+
+from classification.analyse import normalize_name
 from classification.processor import ResultProcessor
+from classification.reader import ResultReader
 from classification.scorer import ResultScorer
 
 
@@ -49,6 +53,13 @@ class TestRBR(unittest.TestCase):
         df_points = scorer.calculate_points(sort_column='Tijd')
         print(df_points)
         # TODO: Add assertions to check if points calculation is correct
+
+    def test_normalize_name_removes_diacritics(self):
+        """Names that differ only by accents should be considered equivalent."""
+
+        self.assertEqual(normalize_name('André'), 'Andre')
+        self.assertEqual(normalize_name('Andre'), 'Andre')
+        self.assertEqual(normalize_name('  André  '), 'Andre')
 
 
 if __name__ == '__main__':
