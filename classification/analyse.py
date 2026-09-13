@@ -1,10 +1,13 @@
 """Module to calculate the classification."""
 
 import argparse
-import pandas as pd
+
 import numpy as np
-from classification.reader import ResultReader
+import pandas as pd
+
+from classification.name_utils import normalize_name
 from classification.processor import ResultProcessor
+from classification.reader import ResultReader
 from classification.scorer import ResultScorer
 
 
@@ -68,9 +71,9 @@ def process_race(path, race, year):
     df_points_men = scorer_men.calculate_points("Tijd", place_string)
     df_points_women = scorer_women.calculate_points("Tijd", place_string)
 
-    # Normalise names to title case
-    df_points_men["Naam"] = df_points_men["Naam"].map(str.title)
-    df_points_women["Naam"] = df_points_women["Naam"].map(str.title)
+    # Normalise names to a single canonical spelling, regardless of diacritics.
+    df_points_men["Naam"] = df_points_men["Naam"].map(normalize_name)
+    df_points_women["Naam"] = df_points_women["Naam"].map(normalize_name)
 
     # Return the relevant columns of the DataFrames
     return (
@@ -91,8 +94,12 @@ def merge_race_dataframes(race_dfs):
     --------
         pd.DataFrame: A single dataframe merged from all input race dataframes on 'Naam'.
     """
-    combined_df = race_dfs[0]
+    combined_df = race_dfs[0].copy()
+    combined_df["Naam"] = combined_df["Naam"].map(normalize_name)
+
     for df in race_dfs[1:]:
+        df = df.copy()
+        df["Naam"] = df["Naam"].map(normalize_name)
         combined_df = pd.merge(combined_df, df, on="Naam", how="outer")
     return combined_df
 
@@ -171,8 +178,8 @@ def calculate_points_for_year(path, year, races):
     reader = ResultReader("excel")
     df_ag_men = reader.read_results(path + "Agegroups_mannen.xlsx").drop_duplicates()
     df_ag_women = reader.read_results(path + "Agegroups_vrouwen.xlsx").drop_duplicates()
-    df_ag_men["Naam"] = df_ag_men["Naam"].map(str.title)
-    df_ag_women["Naam"] = df_ag_women["Naam"].map(str.title)
+    df_ag_men["Naam"] = df_ag_men["Naam"].map(normalize_name)
+    df_ag_women["Naam"] = df_ag_women["Naam"].map(normalize_name)
 
     combined_df_men = merge_race_dataframes(race_dfs_men)
     combined_df_women = merge_race_dataframes(race_dfs_women)
