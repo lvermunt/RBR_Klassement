@@ -3,6 +3,10 @@
 import logging
 import math
 
+from classification.name_utils import normalize_name
+
+logger = logging.getLogger(__name__)
+
 
 # pylint: disable=too-few-public-methods
 class ResultProcessor:
@@ -41,7 +45,7 @@ class ResultProcessor:
             processing_method = getattr(self, f"process_results_{race.lower()}")
             processing_method(year)
         except AttributeError:
-            logging.error('Race "%s" has not been implemented yet', race)
+            logger.error('Race "%s" has not been implemented yet', race)
 
     def process_results_borne(self, year=2026):
         """
@@ -244,6 +248,8 @@ class ResultProcessor:
                 df = df.dropna(subset=df.columns[1:], how="all")
                 df = df[~df.iloc[:, 0].isin([df.columns[0]])]
                 df = df[~df.iloc[:, status_column].isin(["DQ", "DSQ", "DNS", "DNF"])]
+                if "Naam" in df.columns:
+                    df["Naam"] = df["Naam"].map(normalize_name)
                 df = df.drop_duplicates(subset=["Naam"]).reset_index(drop=True)
                 df = df.reset_index(drop=True)
 
